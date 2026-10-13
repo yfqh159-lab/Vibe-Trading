@@ -379,7 +379,7 @@ It is designed for research, simulation, and backtesting — and, when you choos
 | **Run analyst teams** | Multi-agent research reviews for investment, quant, crypto, macro, and risk workflows. |
 | **Put research into IM channels** | Run the same session runtime through WebSocket, Telegram, Slack, Discord, Matrix, WhatsApp, Signal, QQ/NapCat, WeChat/WeCom, Feishu/Lark, DingTalk, Teams, email, and Mochat with CLI, REST, and Web UI controls. |
 | **Ship usable artifacts** | Reports, TradingView Pine Script, TDX, MetaTrader 5, MCP tools, and later research sessions. |
-| **Bench a pre-built alpha zoo** | One-line IC + alive/reversed/dead categorisation across 475 alphas (Qlib 158 + Kakushadze 101 + GTJA 191 + academic + PIT-safe fundamental) on your universe. |
+| **Bench a pre-built alpha zoo** | One-line IC + alive/reversed/dead categorisation across 478 alphas (Qlib 158 + Kakushadze 101 + GTJA 191 + academic + PIT-safe fundamental) on your universe. |
 | **Spot correlation regimes** | An edge-density + hysteresis timeline on the `/correlation` surface showing when markets fuse into one bloc — descriptive risk context, not a signal. Undefined pair correlations keep edge density unknown, so constant-price histories cannot claim a measured zero density. |
 
 Daily correlation and regime requests align each source by its local calendar date, including mixed timezone-aware and timezone-naive histories.
@@ -798,9 +798,9 @@ alongside the bundled roster (same-name files override it, like user skills) and
 </details>
 
 <details>
-<summary><b>Alpha Zoo</b> <sub>475 pre-built quant alphas across 5 families</sub></summary>
+<summary><b>Alpha Zoo</b> <sub>478 pre-built quant alphas across 5 families</sub></summary>
 
-- 🧬 475 cross-sectional alphas, lookahead-banned at the operator layer
+- 🧬 478 cross-sectional alphas, lookahead-banned at the operator layer
 - 📈 IC + IR + alive/reversed/dead categorisation in one CLI command
 - 🔬 AST purity gate + 300-row lookahead sentinel test + `pytest-socket` network kill-switch
 - 📦 Apache-2 attribution for Qlib; per-zoo `LICENSE.md` declaring formulas as mathematical content
@@ -1023,8 +1023,9 @@ vibe-trading-mcp               # start MCP server (stdio)
 - **Docker** for Path A
 - OpenAI Codex can also be used with ChatGPT OAuth: set `LANGCHAIN_PROVIDER=openai-codex`, then run `vibe-trading provider login openai-codex`. This does not use `OPENAI_API_KEY`.
 - GitHub Copilot can be used with an active Copilot subscription instead of a separately billed LLM API key. See [GitHub Copilot SDK provider](#github-copilot-sdk-provider).
+- A local Claude Code login can drive the agent without an API key. See [Claude Code CLI provider](#claude-code-cli-provider).
 
-> **Supported LLM providers:** OpenRouter, OpenAI, Anthropic (native Messages API), DeepSeek, OpenCode (Go / Zen), Gemini, Groq, DashScope/Qwen, Zhipu, Moonshot/Kimi, MiniMax, SiliconFlow (CN + Global), Xiaomi MIMO, Novita AI, iFlytek Spark, Z.ai, NVIDIA NIM, ModelScope, GitHub Copilot, Ollama (local). When no `*_BASE_URL` is set, each provider falls back to its canonical endpoint, so just a key is enough. See `.env.example` for config.
+> **Supported LLM providers:** OpenRouter, OpenAI, Anthropic (native Messages API), DeepSeek, OpenCode (Go / Zen), Gemini, Groq, DashScope/Qwen, Zhipu, Moonshot/Kimi, MiniMax, SiliconFlow (CN + Global), Xiaomi MIMO, Novita AI, iFlytek Spark, Z.ai, NVIDIA NIM, ModelScope, GitHub Copilot, Claude Code CLI, Ollama (local). When no `*_BASE_URL` is set, each provider falls back to its canonical endpoint, so just a key is enough. See `.env.example` for config.
 
 > **Tip:** All markets work without any API keys thanks to automatic fallback. yfinance/Yahoo (HK/US/Canada/UK), OKX (crypto), and AKShare (A-shares, US, HK, futures, forex) are all free. LSE `.L` quotes must declare GBP or GBp so pence can be normalized before GBP accounting. Tushare token is optional; tencent, baostock and AKShare are the no-token A-share fallbacks.
 
@@ -1053,6 +1054,35 @@ vibe-trading
 ```
 
 Authentication priority is `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN`, stored Copilot CLI credentials, then `gh` credentials. Vibe-Trading does not copy or persist SDK credentials. Host keychain credentials are not automatically available inside Docker, so containers should receive `COPILOT_GITHUB_TOKEN`.
+
+### Claude Code CLI provider
+
+The `claude-cli` provider uses the [Claude Code](https://claude.com/claude-code) CLI you already have installed and logged in. Each agent step runs one headless `claude -p` process that only chooses the next step — call these tools, or give the final answer. Vibe-Trading runs the tools itself, so the evidence ledger, grounding checks and swarm deliverable checks behave exactly as with an API provider. It does not read `ANTHROPIC_API_KEY`.
+
+Log in once with Claude Code, then check that Vibe-Trading can see the login:
+
+```bash
+claude auth login
+vibe-trading provider login claude-cli   # reports the login; it does not start a new one
+```
+
+Then configure `agent/.env`:
+
+```dotenv
+LANGCHAIN_PROVIDER=claude-cli
+LANGCHAIN_MODEL_NAME=claude-opus-5-5
+# LANGCHAIN_REASONING_EFFORT=high                   # low|medium|high|xhigh|max; passed as --effort
+# CLAUDE_CLI_PATH=/opt/homebrew/bin/claude          # when `claude` is not on PATH or in ~/.local/bin
+# CLAUDE_CLI_DENY_TOOL_PREFIXES=trading_,etoro_     # default; set empty to offer every tool
+# CLAUDE_CLI_BASH_POLICY=python-only                # or `off`
+```
+
+- `CLAUDE_CLI_DENY_TOOL_PREFIXES` hides tools whose names start with these prefixes from the model. The default hides every `trading_*` and `etoro_*` tool, read-only ones included, so the agent cannot quote or list positions through a broker connector under this provider until you change it.
+- `CLAUDE_CLI_BASH_POLICY=python-only` lets the `bash` tool run only `python <relative script>.py`, `python -c ...`, and read-only `ls`/`cat`/`head`/`tail`/`wc`/`pwd` on non-hidden relative paths (so not `.env`); refused calls are returned to the model so it can choose again. Any other value stops the provider from starting.
+
+> **Warning:** Both settings are convenience filters, not a security boundary. `python -c` can still run arbitrary code, and external MCP tools (`mcp_<server>_<tool>`) are not covered by the default prefixes. Live orders stay bound by the mandate gate and kill switch whatever these settings allow.
+
+> **Note:** When Settings shows this provider, it loads the models your Claude Code login can run (cached for 5 minutes; **Load models** refreshes), and the reasoning effort menu offers only the levels the selected model accepts. The chosen level is passed to each `claude -p` call as `--effort`; it does not read or change `~/.claude/settings.json`, and "Provider default" means the model's own default. Base URL, temperature and `MAX_RETRIES` have no effect with this provider, and `TIMEOUT_SECONDS` is raised to at least 600 seconds per decision. Image input is not supported. The CLI returns each decision in one piece, so a decision longer than `VIBE_TRADING_SSE_TIMEOUT` (default 90 seconds) makes the Web UI report a timeout while the run continues; raise that value if you use high effort levels.
 
 ### Path A: Docker (zero setup)
 
@@ -1151,12 +1181,15 @@ Copy `agent/.env.example` to `agent/.env` and uncomment the provider block you w
 |----------|:--------:|-------------|
 | `LANGCHAIN_PROVIDER` | Yes | Provider name (`openrouter`, `deepseek`, `groq`, `ollama`, etc.) |
 | `<PROVIDER>_API_KEY` | Yes* | API key (`OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY`, etc.) |
-| `<PROVIDER>_BASE_URL` | Yes | API endpoint URL |
+| `<PROVIDER>_BASE_URL` | Yes* | API endpoint URL |
 | `LANGCHAIN_MODEL_NAME` | Yes | Model name (e.g. `deepseek-v4-pro`) |
-| `LANGCHAIN_REASONING_EFFORT` | No | Reasoning effort (`none`, `low`, `medium`, `high`, or `max`) |
+| `LANGCHAIN_REASONING_EFFORT` | No | Reasoning effort (`none`, `low`, `medium`, `high`, or `max`; `claude-cli` takes `low` through `max` plus `xhigh`, and no `none`) |
 | `LANGCHAIN_USE_RESPONSES_API` | No | Responses transport override: literal `true` uses `/v1/responses` when the endpoint supports it; native adapters retain their own transport; all other values use Chat Completions |
 | `TUSHARE_TOKEN` | No | Tushare Pro token for A-share data (falls back to AKShare) |
 | `TIMEOUT_SECONDS` | No | LLM call timeout, default 120s |
+| `CLAUDE_CLI_PATH` | No | `claude` executable for the `claude-cli` provider when it is not on PATH or in `~/.local/bin` |
+| `CLAUDE_CLI_DENY_TOOL_PREFIXES` | No | Tool-name prefixes hidden from the `claude-cli` model (default `trading_,etoro_`; empty offers every tool) |
+| `CLAUDE_CLI_BASH_POLICY` | No | `python-only` (default) or `off` for the `claude-cli` provider's `bash` tool |
 | `API_AUTH_KEY` | Recommended for network deployments | Bearer token required when the API is reachable from non-local clients |
 | `VIBE_TRADING_ENABLE_SHELL_TOOLS` | No | Explicit opt-in for shell-capable tools in remote API/MCP-SSE style deployments |
 | `VIBE_TRADING_ALLOWED_FILE_ROOTS` | No | Extra comma-separated roots for document and broker-journal imports |
@@ -1166,7 +1199,7 @@ Copy `agent/.env.example` to `agent/.env` and uncomment the provider block you w
 | `VIBE_TRADING_EXTRA_CORS_ORIGINS` | No | Comma-separated origins **added** to the loopback CORS defaults (`CORS_ORIGINS` replaces them instead) |
 | `CONTENT_FILTER_WARNING_THRESHOLD` | No | Content-filter warning ratio threshold (default 0.05 = 5%). When the ratio of LLM responses blocked by content moderation exceeds this, the run card warns you to switch providers. |
 
-<sub>* Ollama does not require an API key. OpenAI Codex uses ChatGPT OAuth and stores tokens via `oauth-cli-kit`, not in `agent/.env`. GitHub Copilot authentication is handled by the official SDK.</sub>
+<sub>* Ollama does not require an API key. OpenAI Codex uses ChatGPT OAuth and stores tokens via `oauth-cli-kit`, not in `agent/.env`. GitHub Copilot authentication is handled by the official SDK. Claude Code CLI uses the local `claude` login and needs no API key or base URL.</sub>
 
 **Free data (no key needed):** A-shares via AKShare, HK/US/Canada/UK equities via Yahoo/yfinance, crypto via OKX, 100+ crypto exchanges via CCXT. The system automatically selects the best available source for each market.
 
@@ -1201,7 +1234,7 @@ The interactive TUI (`vibe-trading`) now uses a terminal-native transcript: a st
 vibe-trading               # interactive TUI
 vibe-trading run -p "..."  # single run
 vibe-trading serve         # API server
-vibe-trading alpha list    # browse 475 pre-built alphas; show / bench / compare / export-manifest sub-commands available
+vibe-trading alpha list    # browse 478 pre-built alphas; show / bench / compare / export-manifest sub-commands available
 vibe-trading playbook list # five scheduled-research templates; show / create sub-commands available
 vibe-trading channels status --local  # inspect IM channel config and install hints
 vibe-trading provider doctor  # print redacted provider/proxy/package diagnostics
@@ -2126,7 +2159,7 @@ Vibe-Trading/
 │   │   │   ├── web_search_tool.py  #   DuckDuckGo web search
 │   │   │   └── ...                 #   bash, file I/O, factor analysis, options, alpha browser + bench, etc.
 │   │   │
-│   │   ├── factors/                # Alpha Zoo — 475 alphas across 5 families
+│   │   ├── factors/                # Alpha Zoo — 478 alphas across 5 families
 │   │   │   ├── base.py             #   19 operators (rank/scale/ts_*/delta/decay_linear/safe_div/vwap)
 │   │   │   ├── registry.py         #   AST-only metadata load + lazy compute + sanity gates
 │   │   │   ├── bench_runner.py     #   IC + alive/reversed/dead categorisation
@@ -2209,7 +2242,7 @@ Vibe-Trading is part of the **[HKUDS](https://github.com/HKUDS)** agent ecosyste
 | **Data Bridge** | Bring-your-own data: local CSV/Parquet/SQL connectors with schema mapping | Local loader Shipped |
 | **Options Lab** | Vol surface, Greeks dashboard, payoff/scenario explorer | Analytic payoff/scenario tool **Shipped**; surface/dashboard Planned |
 | **Portfolio Studio** | Risk x-ray, constraints, turnover-aware optimizer, rebalance notes | Turnover-aware optimizer **Shipped 0.1.11**; rest Planned |
-| **Alpha Zoo** | 475 pre-built alphas (Qlib 158 + Kakushadze 101 + GTJA 191 + academic + fundamental) with one-line bench, agent integration, and Web UI | **Shipped 0.1.8**, extended through 0.1.12 |
+| **Alpha Zoo** | 478 pre-built alphas (Qlib 158 + Kakushadze 101 + GTJA 191 + academic + fundamental) with one-line bench, agent integration, and Web UI | **Shipped 0.1.8**, extended through 0.1.12 |
 | **Strategy Development Manager** | Register papers / broker research as factors & strategies with a persistent store + automated IC/Sharpe decay lifecycle | **Shipped 0.1.11** |
 | **Correlation Regime** | Edge-density + hysteresis regime timeline layered on `/correlation` — spot when markets fuse into one bloc | **Shipped 0.1.12** |
 | **Research Delivery** | Scheduled briefs and live research sessions through Slack / Telegram / email-style IM channels | Scheduler + IM Runtime Shipped |
