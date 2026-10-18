@@ -9,6 +9,7 @@ import time
 from contextlib import suppress
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from typing import Any
 

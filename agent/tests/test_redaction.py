@@ -251,3 +251,11 @@ def test_redact_text_none_and_empty_and_nonstr_safe() -> None:
     assert redact_text(None) == ""
     assert redact_text("") == ""
     assert redact_text(42) == "42"
+
+
+def test_redact_tool_result_scrubs_basic_authorization_in_stdout() -> None:
+    """A Basic credential in a JSON result's free-text field must not survive."""
+    raw = '{"stdout": "curl -H \'Authorization: Basic dXNlcjpwYXNz\' https://x"}'
+    out = red_mod.redact_tool_result(raw)
+    assert "dXNlcjpwYXNz" not in out
+    assert "Authorization: Basic [redacted]" in out

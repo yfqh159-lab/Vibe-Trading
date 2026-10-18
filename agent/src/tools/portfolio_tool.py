@@ -15,7 +15,7 @@ class PortfolioSummaryTool(BaseTool):
     name = "portfolio_summary"
     description = (
         "Read the latest sanitized snapshot of the user's locally configured "
-        "read-only brokerage accounts. Returns deterministic totals, account "
+        "read-only brokerage accounts and explicitly imported holdings. Returns deterministic totals, account "
         "allocation, combined holdings, weights, unrealized P/L, data-quality "
         "warnings, and risk_xray_args (symbols + weights) that can be passed "
         "straight to the portfolio_risk_xray tool. A source that failed to "
@@ -72,4 +72,12 @@ class PortfolioSummaryTool(BaseTool):
                 },
                 ensure_ascii=False,
             )
-        return json.dumps({"status": "ok", "context": context}, ensure_ascii=False)
+        result = {"status": "ok", "context": context}
+        if kwargs.get("target_weights") is not None:
+            if not snapshot_id:
+                return json.dumps({"status": "error", "message": "target_weights requires snapshot_id"})
+            try:
+                result["proposal"] = PortfolioService().rebalance(snapshot_id, kwargs["target_weights"])
+            except ValueError as exc:
+                return json.dumps({"status": "error", "message": str(exc)})
+        return json.dumps(result, ensure_ascii=False)

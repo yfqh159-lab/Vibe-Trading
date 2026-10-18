@@ -403,45 +403,36 @@ vibe-trading --upload trades_export.csv
 vibe-trading run -p "Analyze my trading behavior, extract my shadow strategy, and compare it with my actual trades"
 ```
 
----
+### Pixel Office management
 
-## 👥 Shadow Account
+Open **Pixel Office** from the feature menu to plan and assign research tasks.
+The Web page, `vibe-trading office` CLI and `pixel_office` agent tool share one
+SQLite task board under your runtime directory. Assignment does not start
+execution; organizational ranks grant no trading permissions. Record the actual
+result when completing a task. See [Pixel Office](pixel-office/README.md) for CLI
+and API examples.
 
-Shadow Account starts from your own trading records instead of a generic strategy template.
+### Import an extraETF holdings export
 
-Upload a broker export, let the agent summarize your behavior, then compare the actual trading path with a rule-based shadow strategy.
-
-| Step | Agent output |
-|------|--------------|
-| **1. Read your journal** | Parses broker exports from 同花顺, 东方财富, 富途, and generic CSV formats. |
-| **2. Profile your behavior** | Holding days, win rate, PnL ratio, drawdown, disposition effect, overtrading, momentum chasing, and anchoring checks. |
-| **3. Extract your rules** | Turns recurring entries/exits into an explicit strategy profile instead of a hand-wavy summary. |
-| **4. Run the shadow** | Backtests the extracted rules and highlights rule breaks, early exits, missed signals, and alternative trade paths. |
-| **5. Deliver the report** | Produces an HTML/PDF report that can be inspected, archived, or refined in a later session. |
+Open **Portfolio → Manage accounts → Import extraETF Investments**, choose the official Investments CSV, confirm the number of holdings in extraETF, and choose the maximum file age you accept. Add the imported source, save, and refresh. Transactions, dividends and X-Ray exports are not holdings and are refused. Imports are local file evidence, separate from broker connections; no extraETF login or browser scraping is used.
 
 ```bash
-vibe-trading --upload trades_export.csv
-vibe-trading run -p "Analyze my trading behavior, extract my shadow strategy, and compare it with my actual trades"
+vibe-trading portfolio import-extraetf ~/Downloads/Investments.csv \
+  --label "extraETF export" --expected-positions 27 --max-age-days 7 --select
+vibe-trading portfolio refresh
+vibe-trading portfolio show
 ```
 
----
+The row count and age above are examples to replace with your own. The entire import fails on an unreadable row, count mismatch, missing price, future file time or expired freshness policy. File mtime is labelled as file mtime, never as a price observation; copying a file can change it. `Portfolio ID` keeps accounts separate even when they hold the same ISIN. Imported totals are quantity × exported price and **exclude cash and other assets absent from the export**. Select disjoint sources: an extraETF view can include accounts already selected through broker connections.
 
-## 💼 Local Multi-Broker Portfolio
+USD, CNY, HKD and EUR display values use [Frankfurter reference rates](https://frankfurter.dev/) with the rate date separate from fetch time; they are not intraday quotes. An unavailable currency fails valuation. Cached rates are labelled stale and cannot produce a rebalancing proposal. An ISIN identifies a security but not its trading venue: imported holdings remain excluded from historical risk-series tools until that identity is resolved.
 
-The Web UI adds a read-only **Portfolio** page that aggregates holdings across the broker connections you pick. Sources are connection instances of read-only profiles declaring `account.read` and `positions.read` — set them up under **Broker Connectors** in [Detailed Capabilities](#-detailed-capabilities). Eligibility is only the safety gate; the connection center also shows how far each connector has been verified for portfolio valuation.
+**Allocation proposal** accepts user-defined percentages totalling 100% and shows value changes for review. It creates no orders, quantities, taxes or fee estimates. The same operation is available through `POST /api/portfolio/rebalance`, `portfolio_summary(snapshot_id=..., target_weights=...)`, or:
 
-| Behavior | What you get |
-|----------|--------------|
-| **Per-source provenance** | Every holding names the connection it came from, valued in USD with a CNY conversion. |
-| **Failed sources excluded** | A source that errors is reported as an error and left out of the totals — never carried forward — and the snapshot is marked incomplete. |
-| **Immutable snapshots** | Each refresh is stored in `~/.vibe-trading/portfolio/portfolio.sqlite3`; credential-free settings live in `~/.vibe-trading/portfolio.json` and `connections.json`. |
-| **Export & analysis** | CSV export, plus a sanitized `portfolio_summary` agent tool whose `risk_xray_args` pass straight into `portfolio_risk_xray`. The same snapshot prints in the terminal with `vibe-trading portfolio show` (`refresh` / `sources` alongside). Risk x-ray uses only observed adjacent returns; it does not bridge missing prices into artificial one-bar returns. |
-
-Broker-reported source currencies are preserved during valuation: HKD account totals and positions, including Futu `HK.*` holdings, are converted with the snapshot USD/HKD rate before USD and CNY values are displayed. Older snapshots remain stored, but value history compares only snapshots produced by the current valuation methodology to avoid false gains or losses after a valuation fix.
-
-For `portfolio_risk_xray`, weekly (`1W`) and monthly (`1M`) inputs annualize
-volatility with 52 and 12 bars per year respectively; daily bars retain the
-252-bar convention. Monthly `1M` is distinct from minute `1m`.
+```bash
+# targets.json maps the snapshot's holdings canonical_id (or CASH) to fractions.
+vibe-trading portfolio rebalance --snapshot-id <snapshot-id> --targets targets.json
+```
 
 ### Portfolio connector compatibility
 
@@ -503,6 +494,7 @@ use a broker sandbox or local simulation. See each profile's notes and the
 | `longbridge-live-sdk-readonly` | longbridge | live | broker_sdk | read-only | `account.read`, `history.read`, `orders.read`, `positions.read`, `quotes.read` | broker_sdk | none declared | disabled (read-only) |
 | `longbridge-paper-sdk` | longbridge | paper | broker_sdk | read-only | `account.read`, `history.read`, `orders.read`, `positions.read`, `quotes.read` | broker_sdk | none declared | disabled (read-only) |
 | `longbridge-paper-trade` | longbridge | paper | broker_sdk | write-enabled | `account.read`, `history.read`, `orders.read`, `positions.read`, `quotes.read` | broker_sdk | `orders.place` | no mandate declared |
+| `mstock-live-rest-readonly` | mstock | live | broker_sdk | read-only | `positions.read` | none declared | none declared | disabled (read-only) |
 | `mt5-live-sdk-readonly` | mt5 | live | broker_sdk | read-only | `account.read`, `history.read`, `orders.read`, `positions.read`, `quotes.read` | broker_sdk | none declared | disabled (read-only) |
 | `mt5-live-trade` | mt5 | live | broker_sdk | write-enabled | `account.read`, `history.read`, `orders.read`, `positions.read`, `quotes.read` | broker_sdk | `orders.place.requires_mandate` | mandate required |
 | `mt5-paper-sdk` | mt5 | paper | broker_sdk | read-only | `account.read`, `history.read`, `orders.read`, `positions.read`, `quotes.read` | broker_sdk | none declared | disabled (read-only) |
@@ -609,18 +601,22 @@ One `get_market_data` call, **29 market-data sources**, one of them the optional
 | `b3_cotahist` | Brazil (B3) | none | official daily B3 cash/odd-lot bars (raw, BRL) from the local store populated by `python -m src.br_data sync`; offline fallback for `.SA` |
 | `local` | any | none | your own CSV / Parquet / DuckDB via `local:` prefix |
 
+Local sources can read bar dates from a `DatetimeIndex`, with or without a
+configured `date_format`; an explicitly mapped date column takes precedence.
+
 **Fallback chains (by IP-ban risk):**
 
 - **A-share** → `tencent` · `eastmoney` · `baostock` · `akshare` · `tushare` · `gildata` · `local`
 - **US** → `yahoo` · `stooq` · `sina` · `eastmoney` · `yfinance` · `tiingo` · `fmp` · `finnhub` · `alphavantage` · `longbridge` · `akshare` · `local`
-- **HK** → `tencent` · `eastmoney` · `yahoo` · `futu` · `akshare` · `yfinance` · `tushare` · `longbridge` · `local`
+- **HK** → `tencent` · `eastmoney` · `yahoo` · `futu` · `akshare` · `yfinance` · `tushare` · `longbridge` · `gildata` · `local`
 - **India (NSE/BSE)** → `yahoo` · `yfinance` · `india_broker` · `local`
 - **Brazil (B3 `.SA`)** → `yahoo` · `yfinance` · `b3_cotahist` · `local`
 - **Korea (KOSPI/KOSDAQ)** → `pykrx` · `yahoo` · `yfinance` · `local`
+- **Indices** → `yahoo` · `yfinance` · `gildata` · `local`
 - **UK (LSE)** → `yahoo` · `yfinance` · `local` *(declared GBP/GBp quotes only)*
 - **Crypto** → `okx` · `binance` · `ccxt` · `yfinance` · `local`
 - **Forex / metals** → `mt5` · `akshare` · `yfinance` · `local`
-- **Canada / Vietnam / Argentina / indices** → `yahoo` · `yfinance` · `local`
+- **Canada / Vietnam / Argentina** → `yahoo` · `yfinance` · `local`
 - **China futures** → `akshare` · `local` &nbsp;·&nbsp; **funds** → `tushare` · `akshare` · `local` &nbsp;·&nbsp; **macro** → `akshare` · `tushare` · `local`
 
 ### Using Longbridge explicitly
@@ -747,15 +743,16 @@ run from a clone (`pip install -e .`).
 </details>
 
 <details>
-<summary><b>Broker Connectors</b> <sub>18 brokers — read + paper, bounded-live where supported</sub></summary>
+<summary><b>Broker Connectors</b> <sub>19 brokers — read + paper, bounded-live where supported</sub></summary>
 
-Connector-first profiles. Most do read + paper-account order placement — IBKR is read-only, Robinhood is live-only (no paper account), Scalable Capital is read-only (no paper account exists at all), and Trading 212 and Toss Securities refuse order placement entirely, paper included; live order placement is bounded by a user-defined mandate (symbol allowlist, order-size / exposure caps, daily trade cap, instant kill switch) and never holds funds — the broker executes. Order-placing tools stay off MCP (agent + CLI only). Research / backtest paths are structurally barred from any live endpoint.
+Connector-first profiles. Most do read + paper-account order placement — IBKR is read-only, Robinhood is live-only (no paper account), Scalable Capital is read-only (no paper account exists at all), mStock (India) is read-only live over its Type B REST API (no paper account), and Trading 212 and Toss Securities refuse order placement entirely, paper included; live order placement is bounded by a user-defined mandate (symbol allowlist, order-size / exposure caps, daily trade cap, instant kill switch) and never holds funds — the broker executes. Order-placing tools stay off MCP (agent + CLI only). Research / backtest paths are structurally barred from any live endpoint.
 
 | Broker | Markets | Capabilities |
 |--------|---------|--------------|
 | **IBKR** | global | local TWS / Gateway, read-only |
 | **Robinhood** | US | Agentic MCP (desktop OAuth) — equity read + bounded live; options order placement is not supported |
 | **Scalable Capital** | DE / EU | Agentic MCP (desktop OAuth) — fully read-only; no paper account exists |
+| **mStock** | India (NSE/BSE) | Separate holdings/net-position reads; no portfolio aggregation or orders |
 | **Tiger** | US / HK / A | read + paper + bounded live |
 | **Alpaca** | US | read + paper + bounded live (+ TAP credential-isolation mode) |
 | **OKX** · **Binance** | crypto | read + paper + bounded live |
@@ -873,14 +870,14 @@ that is a bug, not a pattern.
 | Module | What it covers |
 |--------|----------------|
 | `options` | Black-Scholes price + greeks, implied-volatility inversion |
-| `fixedincome` | Bond math, Nelson-Siegel / Svensson curve fitting |
+| `fixedincome` | Bond math, Nelson-Siegel / Svensson curve fitting; schedules, accrual, key-rate tenors and yield inversion reject non-finite inputs by name. |
 | `credit` | Altman Z-score, Merton / KMV distance-to-default; CDS premium dates retain their configured frequency, with a final stub when maturity falls between coupons. |
 | `timeseries` | Stationarity, cointegration, GARCH, bootstrap; OU fits use adjacent observed lag pairs; missing observations never become artificial one-step transitions. |
 | `risk` · `var_backtest` | VaR / CVaR / EVT and their backtests |
 | `attribution` | Brinson-Fachler decomposition |
 | `performance` · `fundmath` | TWR / MWR / Modified Dietz; XIRR / MOIC / DPI / TVPI |
 | `factormodel` · `eventstudy` | Factor regressions, event studies; portfolio style exposure reports incomplete factor rows as unmatched weight. |
-| `multipletesting` · `crossvalidation` | Deflated significance, purged CV; purged walk-forward splits omit folds with no training observations left after purging. |
+| `multipletesting` · `crossvalidation` | Deflated significance, purged CV; purged walk-forward splits omit folds with no training observations left after purging; Sharpe significance summaries reject non-finite inputs by name. |
 | `impact` | Market-impact models |
 | `volatility` | Heston (1993) stochastic-volatility pricing; Heston pricing requires finite inputs and a positive integration limit; invalid inputs return a domain error. |
 | `portfolio` | Hierarchical Risk Parity allocation |
@@ -1446,6 +1443,18 @@ signal = engine.compute_signal(panel)
 
 Correlation market inference recognizes explicit crypto pairs; bare equity tickers such as `ABNB` and `SOL` use the US equity data chain.
 
+### Trade journal fees
+
+Journal PnL includes recorded fees. When one fill closes a position and opens
+an opposite position, its fee is split by quantity between the two legs.
+Profile win rate and the average-win/average-loss ratio use the resulting net
+PnL of FIFO matched portions; those portions are not necessarily whole orders.
+
+Generic journals accept a complete `datetime` column or separate `date` and
+`time` columns (case-insensitive). Split columns are combined before sorting
+and FIFO matching; Excel date serials and time fractions are supported.
+A complete `datetime` column takes precedence when all three are present.
+
 ### Market Research
 
 ```bash
@@ -1673,7 +1682,7 @@ Posting `{}` schedules a template on its own suggested cadence with its declared
 
 ## 🔌 MCP Plugin
 
-Vibe-Trading exposes 76 MCP tools for any MCP-compatible client. Runs as a stdio subprocess — no server setup needed. Core research tools work with zero API keys for HK/US/crypto; trading connector tools use the selected connector profile, and `run_swarm` needs an LLM key.
+Vibe-Trading exposes 81 MCP tools for any MCP-compatible client. Runs as a stdio subprocess — no server setup needed. Core research tools work with zero API keys for HK/US/crypto; trading connector tools use the selected connector profile, and `run_swarm` needs an LLM key.
 
 **Environment variables:** the client spawns the server itself, so a shell `export` never reaches it — set them in the client's `env` block. Generated backtest code is sandboxed to the allowed run roots, so writing results into a workspace of your own needs `VIBE_TRADING_ALLOWED_RUN_ROOTS`:
 
@@ -1742,7 +1751,7 @@ with `--host` / `--port`.
 
 </details>
 
-**MCP tools exposed (76):** `list_skills`, `load_skill`, `start_research_goal`, `get_research_goal`, `add_goal_evidence`, `update_research_goal_status`, `backtest`, `factor_analysis`, `alpha_zoo`, `alpha_bench`, `analyze_options`, `analyze_options_payoff`, `pattern_recognition`, `read_url`, `read_document`, `web_search`, `write_file`, `read_file`, `read_run_artifact`, `list_strategies`, `query_strategies`, `get_strategy_evidence`, `refresh_strategy_evidence`, `trading_connections`, `trading_select_connection`, `trading_check`, `trading_account`, `trading_positions`, `trading_orders`, `trading_quote`, `trading_history`, `list_swarm_presets`, `run_swarm`, `get_market_data`, `get_fund_flow`, `get_dragon_tiger`, `get_northbound_flow`, `get_southbound_flow`, `get_margin_trading`, `get_block_trades`, `get_shareholder_count`, `get_lockup_expiry`, `get_sector_info`, `get_research_reports`, `get_stock_news`, `get_sec_filings`, `get_financial_statements`, `get_options_chain`, `get_stock_profile`, `screen_market`, `search_symbol`, `get_macro_series`, `iwencai_search`, `qveris_search`, `qveris_inspect`, `qveris_execute`, `get_institutional_holdings`, `etf_holdings`, `prediction_market`, `research_papers`, `get_swarm_status`, `get_run_result`, `list_runs`, `reap_stale_runs`, `retry_run`, `analyze_trade_journal`, `extract_shadow_strategy`, `run_shadow_backtest`, `render_shadow_report`, `scan_shadow_signals`, `quantlib_call`, `cashflow_performance`, `orderbook_depth`, `sentiment`, `technical_indicators`, `get_fundamentals`.
+**MCP tools exposed (81):** `list_skills`, `load_skill`, `start_research_goal`, `get_research_goal`, `add_goal_evidence`, `update_research_goal_status`, `backtest`, `factor_analysis`, `alpha_zoo`, `alpha_bench`, `analyze_options`, `analyze_options_payoff`, `pattern_recognition`, `read_url`, `read_document`, `web_search`, `write_file`, `read_file`, `read_run_artifact`, `list_strategies`, `query_strategies`, `get_strategy_evidence`, `refresh_strategy_evidence`, `adapt_strategy`, `trading_connections`, `trading_select_connection`, `trading_check`, `trading_account`, `trading_positions`, `trading_orders`, `trading_quote`, `trading_history`, `list_swarm_presets`, `run_swarm`, `get_market_data`, `get_fund_flow`, `get_dragon_tiger`, `get_northbound_flow`, `get_southbound_flow`, `get_margin_trading`, `get_block_trades`, `get_shareholder_count`, `get_lockup_expiry`, `get_sector_info`, `get_research_reports`, `get_stock_news`, `get_sec_filings`, `get_financial_statements`, `get_options_chain`, `get_stock_profile`, `screen_market`, `search_symbol`, `get_macro_series`, `iwencai_search`, `qveris_search`, `qveris_inspect`, `qveris_execute`, `get_institutional_holdings`, `etf_holdings`, `prediction_market`, `research_papers`, `get_swarm_status`, `get_run_result`, `list_runs`, `reap_stale_runs`, `retry_run`, `analyze_trade_journal`, `extract_shadow_strategy`, `run_shadow_backtest`, `render_shadow_report`, `scan_shadow_signals`, `quantlib_call`, `cashflow_performance`, `orderbook_depth`, `sentiment`, `technical_indicators`, `get_fundamentals`, `get_fund_nav`, `get_cn_macro_series`, `get_cn_announcements`, `search_broker_reports`.
 
 `quantlib_call` attribution requires finite sector weights and returns, finite Carino return inputs, and a finite non-negative weight-sum tolerance. Invalid data is rejected explicitly rather than returned as an attribution result containing `NaN`. Missing returns for a zero-weight sector may still be inferred from the other side.
 
@@ -2000,6 +2009,38 @@ The agent exposes connector-scoped tools named `trading_connections`,
 Live-broker raw MCP tools are not registered directly as `mcp_<broker>_*`.
 No IBKR order-placement tool is registered.
 
+### Live runner model spending
+
+Model calls are billed even when a mandate permits only one trade or the agent
+places no orders. The runner checks safety every minute, but defaults to a model
+decision every **15 minutes**, at most **26 decisions / 1,000,000 reported tokens
+per UTC day**. Each decision starts a fresh conversation and reconstructs broker
+state under the existing mandate gate.
+
+Configure cadence, a once-daily wall-clock time/timezone, and daily budgets in
+**Runtime → Model schedule and spending limits**, or the chat runner panel.
+Stop the runner before editing. The CLI uses the same authenticated API:
+
+```bash
+vibe-trading connector runner-settings --profile robinhood-live-mcp
+vibe-trading connector runner-settings --profile robinhood-live-mcp --file runner-settings.json
+```
+
+The JSON accepts `interval_seconds`, optional `daily_at` (`HH:MM`) and `timezone`
+(IANA, default `America/New_York`), `max_daily_turns`, `max_daily_tokens`, and
+optional `max_daily_cost_usd`, `input_usd_per_million`, `output_usd_per_million`.
+Both prices are required for a dollar limit. Use the highest applicable input or
+cache-write price; estimates ignore cache discounts and auxiliary model calls.
+Daily projections need measured usage and configured prices; unknown costs stay
+unknown. The same settings are exposed by `GET` / `PUT /live/runner/settings?broker=robinhood`.
+
+Spending history survives restarts. Limits are checked **after each provider
+response**, so a response can overshoot a token or estimated-dollar budget.
+Exhaustion or missing usage trips the existing kill switch and cancels the active
+decision before its tool calls. Existing halt/cancel/flatten behavior applies;
+inspect the broker and usage before resuming. An unfinished decision after a
+crash is blocked for inspection, never silently counted as free.
+
 ### 🔐 TAP Mode — full credential isolation & human-approved writes
 
 **Opt-in, off by default.** If the `TAP_*` variables below are unset, the
@@ -2135,7 +2176,7 @@ Vibe-Trading/
 ├── agent/                          # Backend (Python)
 │   ├── cli/                        # CLI package — interactive TUI + subcommands
 │   ├── api_server.py               # FastAPI server — runs, sessions, upload, swarm, SSE
-│   ├── mcp_server.py               # MCP server — 76 tools for OpenClaw / Claude Desktop
+│   ├── mcp_server.py               # MCP server — 81 tools for OpenClaw / Claude Desktop
 │   │
 │   ├── src/
 │   │   ├── agent/                  # ReAct agent core
@@ -2419,3 +2460,21 @@ MIT License — see [LICENSE](LICENSE)
 <p align="center">
   <img src="https://visitor-badge.laobi.icu/badge?page_id=HKUDS.Vibe-Trading&style=flat" alt="visitors"/>
 </p>
+
+### Custom model endpoints
+
+Settings → Custom OpenAI-compatible providers tests a chat-completions endpoint,
+saves its API key in the OS credential vault (`pip install "vibe-trading-ai[keyring]"`),
+and activates it for new runs. Testing sends a short model request and may incur
+the provider's normal API charge. Active profiles are immutable; save a changed
+endpoint under a new ID and activate it after testing. Switch back through the
+normal model provider selector. Keys are never stored in the profile JSON.
+
+The same flow is available from `vibe-trading provider custom list`,
+`vibe-trading provider custom add --id example --label Example --base-url https://api.example.com/v1 --model example-model`
+(the key is prompted privately), and `vibe-trading provider custom activate example`.
+The configured provider is used by CLI, API, Web, and agent runs alike.
+
+RSSHub daily event enrichment uses calendar-date keys: timezone-aware `as_of` values and daily bar labels retain their displayed date, matching the provider’s knowable-date policy. This does not convert intraday publication instants between markets.
+
+RSSHub feed `code_style` transformations separate the final venue suffix from the ticker, preserving share-class dots: `BRK.B.US` becomes `BRK.B` for `bare` routes and `USBRK.B` for `exchange_prefix`; `raw` remains unchanged.

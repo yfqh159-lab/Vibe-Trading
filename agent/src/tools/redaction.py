@@ -97,7 +97,15 @@ _SENSITIVE_ARG_KEYS = {
     "token",
 } | _PII_EXACT_KEYS
 
-_SENSITIVE_ARG_MARKERS = ("api_key", "authorization", "password", "secret", "token")
+_SENSITIVE_ARG_MARKERS = (
+    "api_key",
+    "authorization",
+    "cookie",
+    "password",
+    "private_key",
+    "secret",
+    "token",
+)
 
 #: Keys that stay sensitive in the ARGUMENTS / audit sink but are released in
 #: the tool-RESULT sink.
@@ -117,15 +125,26 @@ _RESULT_SAFE_KEYS = {"content"}
 #: Exact token-metadata names eligible for a VALUE-SHAPED exemption in every
 #: sink. A familiar name alone is never permission to release its value:
 #: counts must be nonnegative integers (or absent), usage may be a mapping of
-#: counts, and CLOB ids must have the public decimal uint256 shape. Unknown
+#: counts, ``token_source`` must be one of :data:`_TOKEN_SOURCE_LABELS` (or
+#: absent), and CLOB ids must have the public decimal uint256 shape. Unknown
 #: shapes fail closed, including unprefixed secrets no text regex can detect.
 _BENIGN_TOKEN_FIELD_KEYS = {
     "token_budget",
     "token_usage",
+    "token_source",
     "total_input_tokens",
     "total_output_tokens",
+    "cache_read_tokens",
+    "cache_creation_tokens",
     "clob_token_id",
 }
+
+#: The closed vocabulary a ``token_source`` provenance label may carry. The
+#: label is a fixed enum, not free text, so any other string fails closed
+#: rather than riding a familiar key name into a trace. ``None`` is the honest
+#: "unlabelled" value and is preserved. Adding a value here is the only way a
+#: new provenance label becomes surfaceable.
+_TOKEN_SOURCE_LABELS = frozenset({"provider", "estimated"})
 
 
 def _fold_key(name: str) -> str:
@@ -310,6 +329,11 @@ def is_sensitive_arg(
                 and len(value) <= 78
                 and int(value) < 2**256
             )
+        if folded == "tokensource":
+            return not (
+                value is None
+                or (isinstance(value, str) and value in _TOKEN_SOURCE_LABELS)
+            )
         if folded == "tokenusage" and isinstance(value, dict):
             return False
         return not (value is None or (type(value) is int and value >= 0))
@@ -383,15 +407,21 @@ def _redact_token_usage(value: Any, *, sink: str) -> Any:
         sink: Sink policy for nested sensitive keys.
 
     Returns:
-        A fresh mapping containing only counts, nulls, and redaction sentinels.
+        A fresh mapping containing only counts, nulls, validated
+        ``token_source`` labels (:data:`_TOKEN_SOURCE_LABELS`), and redaction
+        sentinels.
     """
     if isinstance(value, dict):
-        return {
-            key: _REDACTED
-            if is_sensitive_arg(str(key), sink=sink, value=item)
-            else _redact_token_usage(item, sink=sink)
-            for key, item in value.items()
-        }
+        scrubbed: dict[Any, Any] = {}
+        for key, item in value.items():
+            name = str(key)
+            if is_sensitive_arg(name, sink=sink, value=item):
+                scrubbed[key] = _REDACTED
+            elif _fold_key(name) == "tokensource":
+                scrubbed[key] = item
+            else:
+                scrubbed[key] = _redact_token_usage(item, sink=sink)
+        return scrubbed
     return value if value is None or (type(value) is int and value >= 0) else _REDACTED
 
 
@@ -427,7 +457,8 @@ _TEXT_VALUE = r"\"[^\"\n]*\"|'[^'\n]*'|[^\s,;{}\[\]()\"']+"
 #: backreference. The negative lookahead keeps the substitution idempotent (an
 #: already-redacted value is skipped) and defers ``Bearer <jwt>`` to
 #: :data:`_TEXT_BEARER_PATTERN`, which would otherwise be consumed as the value
-#: and leave the token body visible.
+#: and leave the token body visible, and skips a scheme word that
+#: :data:`_TEXT_AUTH_SCHEME_PATTERN` already followed with the sentinel.
 #:
 #: Every quantifier applies to a bounded character class, with no nesting and
 #: no overlapping alternatives, so matching stays linear (no ReDoS surface).
@@ -441,7 +472,9 @@ _TEXT_KV_PATTERN = re.compile(
     r"(?:\b|(?<=(?-i:[A-Z0-9])_)|(?<=aws_))"
     r"(?P<name>" + _TEXT_CREDENTIAL_KEYS + r")\b(?P=q)"
     r"(?P<sep>\s*[:=]\s*)"
-    r"(?![\"']?" + re.escape(_REDACTED) + r"[\"']?|bearer\b)"
+    r"(?![\"']?" + re.escape(_REDACTED) + r"[\"']?"
+    r"|(?:bearer|basic|digest|token|negotiate|ntlm)\s+" + re.escape(_REDACTED) +
+    r"|bearer\b)"
     r"(?P<value>" + _TEXT_VALUE + r")",
     re.IGNORECASE,
 )
@@ -499,10 +532,35 @@ _TEXT_TOKEN_PATTERN = re.compile(
     r"sk-[A-Za-z0-9_-]{20,}"                 # OpenAI / Anthropic style
     r"|gh[pousr]_[A-Za-z0-9]{30,}"           # GitHub PAT family
     r"|xox[baprs]-[A-Za-z0-9-]{10,}"         # Slack
-    r"|AKIA[0-9A-Z]{16}"                     # AWS access key id
+    r"|(?:AKIA|ASIA)[0-9A-Z]{16}"            # AWS access key id (long/short-lived)
+    r"|(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}"  # Stripe secret / restricted key
+    r"|AIza[A-Za-z0-9_-]{35}"                # Google API key
     r"|pypi-[A-Za-z0-9_-]{16,}"              # PyPI upload token
+    r"|github_pat_[A-Za-z0-9_]{22,}"         # GitHub fine-grained PAT
+    r"|glpat-[A-Za-z0-9_-]{20,}"             # GitLab PAT
+    r"|npm_[A-Za-z0-9]{36}"                  # npm access token
+    r"|hf_[A-Za-z0-9]{30,}"                  # Hugging Face token
+    r"|gsk_[A-Za-z0-9]{20,}"                 # Groq API key
+    r"|nvapi-[A-Za-z0-9_-]{20,}"             # NVIDIA API key
     r"|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{5,}"  # JWT
     r")(?![A-Za-z0-9_-])"
+)
+
+#: Channel credentials that embed the secret in a URL path or a bare token, so
+#: neither the key-based nor the issuer-prefix patterns see them. The Telegram
+#: bot token (``<numeric id>:<35 chars>``) appears in the request URL
+#: ``https://api.telegram.org/bot<token>/sendMessage``, which HTTP client error
+#: messages echo verbatim; Slack and Discord incoming-webhook URLs are bearer
+#: credentials whose last path segment is the secret. The Telegram body is a
+#: fixed-length class and the webhook secrets are bounded runs, so matching
+#: stays linear.
+_TEXT_TELEGRAM_BOT_TOKEN_PATTERN = re.compile(
+    r"(?<![A-Za-z0-9_-])(?:bot)?\d+:[A-Za-z0-9_-]{35}(?![A-Za-z0-9_-])"
+)
+_TEXT_WEBHOOK_URL_PATTERN = re.compile(
+    r"(?P<head>(?i:https://hooks\.slack(?:-gov)?\.com)/(?:services|triggers)/[A-Za-z0-9]+/[A-Za-z0-9]+/"
+    r"|(?i:https://(?:[a-z]+\.)?discord(?:app)?\.com)/api/(?:v\d+/)?webhooks/\d+/)"
+    r"[A-Za-z0-9_-]{20,}"
 )
 
 
@@ -531,9 +589,16 @@ def redact_text(text: object) -> str:
     s = text if isinstance(text, str) else str(text)
     if not s:
         return s
+    s = _TEXT_PRIVATE_KEY_PATTERN.sub(_REDACTED, s)
+    s = _TEXT_QUOTED_COOKIE_HEADER_PATTERN.sub(
+        r"\g<quote>\g<head>\g<sp>" + _REDACTED + r"\g<quote>", s,
+    )
+    s = _TEXT_COOKIE_HEADER_PATTERN.sub(r"\g<head>\g<sp>" + _REDACTED, s)
     s = _TEXT_BEARER_PATTERN.sub(r"\g<scheme> " + _REDACTED, s)
     s = _TEXT_URL_USERINFO_PATTERN.sub(_REDACTED + "@", s)
     s = _TEXT_KV_PATTERN.sub(_sub_credential_pair, s)
+    s = _TEXT_WEBHOOK_URL_PATTERN.sub(r"\g<head>" + _REDACTED, s)
+    s = _TEXT_TELEGRAM_BOT_TOKEN_PATTERN.sub(_REDACTED, s)
     # Bare tokens with no key label in front of them.
     return _TEXT_TOKEN_PATTERN.sub(_REDACTED, s)
 

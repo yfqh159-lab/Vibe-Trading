@@ -168,6 +168,9 @@ class LLMConfig(_EnvBase):
     # preflight could not tell a missing key from a working one and the failure
     # surfaced as an opaque 401 at the first call instead (#1223).
     anthropic_api_key: str = Field(alias="ANTHROPIC_API_KEY", default="")
+    langchain_max_tokens: int | None = Field(
+        alias="LANGCHAIN_MAX_TOKENS", default=None, gt=0
+    )
     anthropic_max_tokens: int | None = Field(alias="ANTHROPIC_MAX_TOKENS", default=None, gt=0)
     timeout_seconds: int = Field(alias="TIMEOUT_SECONDS", default=120)
     max_retries: int = Field(alias="MAX_RETRIES", default=2)
@@ -226,6 +229,8 @@ class DataConfig(_EnvBase):
         alias="GILDATA_BASE_URL",
         default="https://api.gildata.com/mcp-servers/aidata-assistant-srv-rawapi",
     )
+    # Standard-version (srv-tool) NL research endpoint — see src/tools/gildata_srv.py.
+    gildata_srv_tool_url: str = Field(alias="GILDATA_SRV_TOOL_URL", default="")
     fred_api_key: str = Field(alias="FRED_API_KEY", default="")
     vibe_trading_iwencai_key: str = Field(alias="VIBE_TRADING_IWENCAI_KEY", default="")
     vibe_trading_sec_ua: str = Field(alias="VIBE_TRADING_SEC_UA", default="")
@@ -449,6 +454,11 @@ class AgentTuningConfig(_EnvBase):
     # tuned against it means anything under real-token accounting. Read only to
     # warn (src/agent/context_budget.py); compaction ignores it.
     token_threshold: int = Field(alias="TOKEN_THRESHOLD", default=40000)
+    # ReAct loop iteration cap for interactive/web sessions. Heavy pipelines
+    # (multi-layer scoring, batch research) legitimately exceed 50 turns.
+    vibe_trading_agent_max_iterations: int = Field(
+        alias="VIBE_TRADING_AGENT_MAX_ITERATIONS", default=50, ge=1,
+    )
     vibe_trading_context_window: int | None = Field(
         alias="VIBE_TRADING_CONTEXT_WINDOW", default=None, gt=0,
     )
@@ -653,6 +663,17 @@ class MemoryConfig(_EnvBase):
     fts_index_enabled: EnvBool = Field(
         default=False, alias="VT_MEMORY_FTS_INDEX",
         description="Enable SQLite FTS5 search index",
+    )
+
+    # Scheduled consolidation system job (scheduler unification).
+    # Deliberately NOT listed in the preset flag map or the memory flag alias
+    # map above: the preset machinery only touches fields in the alias map, so
+    # VT_MEMORY=on/full can never silently enable a background timer. This
+    # flag is opt-in on its own; the job it gates also no-ops honestly unless
+    # VT_MEMORY_GC is enabled (see src/memory/consolidation.py).
+    consolidation_enabled: EnvBool = Field(
+        default=False, alias="VT_MEMORY_CONSOLIDATION",
+        description="Enable the daily memory-consolidation system job",
     )
 
     @model_validator(mode="before")

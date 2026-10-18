@@ -26,7 +26,8 @@
       "correlation": "Compara cómo se mueven los activos entre sí.",
       "scheduled": "Repite una investigación según un horario.",
       "runtime": "Comprueba conexiones de brókeres y el estado de ejecución de operaciones.",
-      "settings": "Configura modelos, fuentes de datos y conexiones de brókeres."
+      "settings": "Configura modelos, fuentes de datos y conexiones de brókeres.",
+      "pixelOffice": "Planifica y asigna tareas de investigación. La asignación no inicia la ejecución; los rangos son etiquetas y no conceden permisos de negociación."
     },
     "instructions": {
       "reports": "Primero pide al asistente un backtest de una estrategia y abre aquí sus resultados. Descarga los PDF y documentos generados en el chat desde la conversación original.",
@@ -36,7 +37,8 @@
       "correlation": "Introduce al menos dos símbolos de activos, elige el período y pulsa Calcular.",
       "scheduled": "Introduce la instrucción de investigación, elige la frecuencia y guarda. El programador local debe estar activado para ejecutar tareas; el envío requiere un canal configurado.",
       "runtime": "Primero configura una conexión de bróker en Ajustes o Cartera. Las operaciones disponibles dependen de sus capacidades y de tu autorización.",
-      "settings": "Configura un modelo para empezar. Añade datos o conexiones de brókeres según lo necesites; investigar datos públicos de mercado no requiere una cuenta de bróker."
+      "settings": "Configura un modelo para empezar. Añade datos o conexiones de brókeres según lo necesites; investigar datos públicos de mercado no requiere una cuenta de bróker.",
+      "pixelOffice": "Planifica y asigna tareas de investigación. La asignación no inicia la ejecución; los rangos son etiquetas y no conceden permisos de negociación."
     }
   },
   "layout": {
@@ -66,13 +68,14 @@
     "sidebar": "Barra lateral de Vibe-Trading",
     "mainNavigation": "Navegación principal",
     "about": "Acerca de",
-    "sessionsLoadFailed": "No se pueden cargar las conversaciones."
+    "sessionsLoadFailed": "No se pueden cargar las conversaciones.",
+    "pixelOffice": "Oficina de píxeles"
   },
   "runtime": {
     "monitorBadge": "Monitor de Runtime",
     "title": "Estado del Runtime en vivo / demo",
-    "subtitlePre": "Estado de solo lectura de",
-    "subtitlePost": ". Esta página no autoriza conectores, ni inicia ni detiene ejecutores, ni envía o cancela órdenes, ni cambia mandatos.",
+    "subtitlePre": "Consulta el estado de los conectores, los mandatos de negociación y la actividad del ejecutor.",
+    "subtitlePost": " Puedes editar la frecuencia de las decisiones del modelo y los límites de gasto cuando el ejecutor esté detenido.",
     "refresh": "Actualizar",
     "unavailableTitle": "Estado del runtime no disponible",
     "unavailableHint": "Trata el runtime del conector como no disponible hasta que el backend entregue un estado actual.",
@@ -112,7 +115,7 @@
     "riskHalted": "riesgo detenido",
     "riskHaltedDesc": "El interruptor de emergencia está activado para este perfil. Trata el runtime del conector como detenido hasta que el estado se despeje.",
     "riskActive": "runtime activo",
-    "riskActiveDesc": "El ejecutor está activo y hay un mandato vigente. Esta página sigue siendo solo de estado, de solo lectura.",
+    "riskActiveDesc": "El ejecutor está activo y su mandato de negociación sigue vigente.",
     "riskIdle": "listo pero inactivo",
     "riskIdleDesc": "Hay autorización y mandato presentes, pero el ejecutor no está activo.",
     "riskDormant": "inactivo",
@@ -396,7 +399,10 @@
       "shadowDeltaPrompt": "Ejecuta un backtest espejo de los últimos 90 días y desglosa dónde mi PnL se desvió del espejo (incumplimientos de reglas, salidas anticipadas, señales perdidas)",
       "shadowReport": "Genera informe de cuenta espejo",
       "shadowReportDesc": "Un informe compartible de 8 partes: la curva de tu cuenta, el retorno ajustado por riesgo y de dónde vino cada ganancia",
-      "shadowReportPrompt": "Genera el informe de cuenta espejo y dame la URL — comienza con la diferencia tú-vs-espejo"
+      "shadowReportPrompt": "Genera el informe de cuenta espejo y dame la URL — comienza con la diferencia tú-vs-espejo",
+      "adaptStrategy": "Adaptar una estrategia registrada",
+      "adaptStrategyDesc": "Conservar la señal y probar otro universo",
+      "adaptStrategyPrompt": "Ayúdame a adaptar una estrategia registrada a otro universo y período. Primero enumera las estrategias y revisa la evidencia de la original; pregunta por el ID, los instrumentos, las fechas y el tamaño de posición que falten. Conserva la señal, genera el código de la derivada, ejecuta el backtest e informa solo de su propia evidencia actualizada."
     },
     "taskSubtitle": "Pregunta sobre una acción, una estrategia o tu portafolio — obtendré los datos, haré los cálculos y te mostraré cada paso.",
     "quickActions": "Acciones rápidas",
@@ -1107,7 +1113,7 @@
     "authentication": "Autenticación",
     "apiKey": "Clave de API",
     "tushareTokenDesc": "Usado para datos de acciones A, futuros, fondos y macro de China. Si no se configura, el proyecto recurre a AKShare cuando está disponible.",
-    "gildataTokenDesc": "Fuente opcional de Gildata (Hundsun Juyuan) para acciones A de China. Si se configura, se une al final de la cadena de respaldo de acciones A con barras diarias ajustadas."
+    "gildataTokenDesc": "Datos opcionales de Gildata: precios diarios ajustados de acciones A, precios sin ajustar de Hong Kong e índices, valores liquidativos de fondos no cotizados y herramientas de macroeconomía, anuncios y análisis de China."
   },
   "qveris": {
     "title": "Mercado de herramientas QVeris",
@@ -1227,7 +1233,10 @@
     "resumeConnector": "Reanudar conector",
     "resumeConnectorTitle": "Desactivar el interruptor de emergencia y reanudar la actividad del conector",
     "connectorResumed": "Conector reanudado",
-    "failedToResumeConnector": "Error al reanudar el conector."
+    "failedToResumeConnector": "Error al reanudar el conector.",
+    "tokenUsage": {
+      "live": "tokens"
+    }
   },
   "runDetail": {
     "title": "Detalle de ejecución",
@@ -1360,6 +1369,19 @@
     "ddNotRecovered": "No recuperado",
     "ddDays": "{{count}} d",
     "dashboard": "Panel de investigación",
+    "llmUsage": {
+      "tab": "Uso de tokens",
+      "provider": "Proveedor",
+      "model": "Modelo",
+      "inputTokens": "Tokens de entrada",
+      "outputTokens": "Tokens de salida",
+      "totalTokens": "Tokens totales",
+      "calls": "Llamadas",
+      "cacheRead": "Tokens de lectura de caché",
+      "cacheCreation": "Tokens de creación de caché",
+      "perIteration": "Detalle por iteración",
+      "iteration": "Iteración"
+    },
     "positions": {
       "tab": "Posiciones",
       "weightDistribution": "Distribución de pesos",
@@ -1832,7 +1854,10 @@
     "output": "Salida",
     "waitingForEvents": "Esperando eventos del agente...",
     "teamStarting": "El equipo se está preparando — primeras actualizaciones en unos segundos…",
-    "detailsUnavailable": "detalles no disponibles"
+    "detailsUnavailable": "detalles no disponibles",
+    "tokens": "↑{{input}} ↓{{output}} tokens",
+    "estimated": "estimados",
+    "tokenSourceUnlabeled": "fuente sin etiqueta"
   },
   "mandate": {
     "runtimeMandate": "Mandato de runtime del conector",
@@ -2131,7 +2156,7 @@
       "badge": "Local y solo lectura · Varias cuentas",
       "title": "Cartera",
       "subtitle": "Una sola valoración de todas las conexiones de solo lectura activas. La cuenta que no se puede leer se marca como error y queda fuera de los totales.",
-      "fxFresh": "USD/CNY {{rate}} · tipo en vivo",
+      "fxFresh": "USD/CNY {{rate}} · tipo de referencia",
       "fxCached": "USD/CNY {{rate}} · tipo en caché",
       "manageAccounts": "Gestionar cuentas",
       "exportCsv": "Exportar CSV",
@@ -2296,6 +2321,30 @@
       "accountDeactivated": " · desactivada",
       "accountSave": "Usar esta cuenta",
       "accountSaved": "Cuenta guardada."
+    },
+    "imports": {
+      "title": "Importar extraETF Investments",
+      "hint": "Solo posiciones, sin efectivo ni precios en tiempo real. La fecha del archivo no es la fecha de observación del precio; los ISIN no tienen un mercado resuelto.",
+      "file": "CSV de Investments",
+      "count": "Número de posiciones esperado (confírmelo en extraETF)",
+      "age": "Antigüedad máxima del archivo (días)",
+      "overlap": "Seleccione fuentes sin solapamientos. La vista de extraETF puede incluir cuentas conectadas aquí.",
+      "import": "Importar archivo",
+      "importing": "Importando…",
+      "success": "Importado. Añada esta exportación desde las fuentes disponibles arriba, guarde y actualice.",
+      "source": "Archivo importado",
+      "mtime": "Archivo modificado: {{time}}",
+      "expires": "Caduca: {{time}}",
+      "tooLarge": "El límite de importación es de 4 MiB."
+    },
+    "rebalance": {
+      "title": "Propuesta de asignación",
+      "hint": "Introduzca porcentajes objetivo que sumen 100%. Los cambios son importes para revisar; no se calculan órdenes, cantidades, impuestos ni comisiones.",
+      "target": "Objetivo de {{id}} (%)",
+      "generate": "Calcular propuesta",
+      "current": "Valor actual",
+      "targetValue": "Valor objetivo",
+      "change": "Cambio de valor"
     }
   },
   "analysis": {

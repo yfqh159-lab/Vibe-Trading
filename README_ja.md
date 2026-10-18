@@ -494,14 +494,15 @@ vibe-trading connector install /tmp/my-broker
 
 - **A 株** → `tencent` · `eastmoney` · `baostock` · `akshare` · `tushare` · `gildata` · `local`
 - **米国株** → `yahoo` · `stooq` · `sina` · `eastmoney` · `yfinance` · `tiingo` · `fmp` · `finnhub` · `alphavantage` · `longbridge` · `akshare` · `local`
-- **香港株** → `tencent` · `eastmoney` · `yahoo` · `futu` · `akshare` · `yfinance` · `tushare` · `longbridge` · `local`
+- **香港株** → `tencent` · `eastmoney` · `yahoo` · `futu` · `akshare` · `yfinance` · `tushare` · `longbridge` · `gildata` · `local`
 - **インド株（NSE/BSE）** → `yahoo` · `yfinance` · `india_broker` · `local`
 - **Brazil (B3 `.SA`)** → `yahoo` · `yfinance` · `b3_cotahist` · `local`
 - **韓国（KOSPI/KOSDAQ）** → `pykrx` · `yahoo` · `yfinance` · `local`
+- **指数** → `yahoo` · `yfinance` · `gildata` · `local`
 - **英国（LSE）** → `yahoo` · `yfinance` · `local` *（GBP/GBp と明示されたクォートのみ）*
 - **暗号資産** → `okx` · `binance` · `ccxt` · `yfinance` · `local`
 - **為替/貴金属** → `mt5` · `akshare` · `yfinance` · `local`
-- **カナダ / ベトナム / アルゼンチン / 指数** → `yahoo` · `yfinance` · `local`
+- **カナダ / ベトナム / アルゼンチン** → `yahoo` · `yfinance` · `local`
 - **中国先物** → `akshare` · `local` &nbsp;·&nbsp; **ファンド** → `tushare` · `akshare` · `local` &nbsp;·&nbsp; **マクロ** → `akshare` · `tushare` · `local`
 
 ### Longbridge を明示的に使う
@@ -618,15 +619,16 @@ clone から実行してください（`pip install -e .`）。
 </details>
 
 <details>
-<summary><b>ブローカー connectors</b> <sub>18 ブローカー — read + paper、対応先では bounded-live</sub></summary>
+<summary><b>ブローカー connectors</b> <sub>19 ブローカー — read + paper、対応先では bounded-live</sub></summary>
 
-connector-first のプロファイル。多くは read + ペーパー口座での発注に対応します —— IBKR は読み取り専用、Robinhood はライブのみ（ペーパー口座なし）、Scalable Capital は読み取り専用（ペーパー口座が存在しません）、Trading 212 と Toss Securities はペーパーを含め発注を一切拒否します。ライブ発注はユーザーが定義した mandate（銘柄許可リスト、発注サイズ / エクスポージャー上限、1 日の取引回数上限、即時 kill switch）で制限され、資金を預かることは一切ありません —— 執行するのはブローカーです。発注系ツールは MCP に公開されません（agent + CLI のみ）。リサーチ / バックテスト経路は構造的にあらゆるライブ endpoint から遮断されています。
+connector-first のプロファイル。多くは read + ペーパー口座での発注に対応します —— IBKR は読み取り専用、Robinhood はライブのみ（ペーパー口座なし）、Scalable Capital は読み取り専用（ペーパー口座が存在しません）、mStock（インド）は Type B REST による読み取り専用ライブです（ペーパー口座なし）、Trading 212 と Toss Securities はペーパーを含め発注を一切拒否します。ライブ発注はユーザーが定義した mandate（銘柄許可リスト、発注サイズ / エクスポージャー上限、1 日の取引回数上限、即時 kill switch）で制限され、資金を預かることは一切ありません —— 執行するのはブローカーです。発注系ツールは MCP に公開されません（agent + CLI のみ）。リサーチ / バックテスト経路は構造的にあらゆるライブ endpoint から遮断されています。
 
 | Broker | Markets | Capabilities |
 |--------|---------|--------------|
 | **IBKR** | global | local TWS / Gateway, read-only |
 | **Robinhood** | US | Agentic MCP (desktop OAuth) — 株式の読み取り + 制限付き株式ライブ注文；オプション注文は未対応 |
 | **Scalable Capital** | DE / EU | Agentic MCP (desktop OAuth) — 完全読み取り専用、ペーパー口座なし |
+| **mStock** | インド（NSE/BSE） | 保有銘柄・ネットポジションを別々に読み取り。ポートフォリオ集計・発注不可 |
 | **Tiger** | US / HK / A | read + paper + bounded live |
 | **Alpaca** | US | read + paper + bounded live (+ TAP credential-isolation mode) |
 | **OKX** · **Binance** | crypto | read + paper + bounded live |
@@ -1293,7 +1295,7 @@ curl -X POST http://localhost:8899/scheduled-runs/playbooks/premarket-brief \
 
 ## 🔌 MCP Plugin
 
-Vibe-Trading は MCP-compatible client 向けに 76 MCP tools を公開します。stdio subprocess として動作し、server setup は不要です。Core research tools は HK/US/crypto で API key なしに動作し、trading connector tools は選択中の connector profile を使います。LLM key が必要なのは `run_swarm` のみです。
+Vibe-Trading は MCP-compatible client 向けに 81 MCP tools を公開します。stdio subprocess として動作し、server setup は不要です。Core research tools は HK/US/crypto で API key なしに動作し、trading connector tools は選択中の connector profile を使います。LLM key が必要なのは `run_swarm` のみです。
 
 **環境変数:** server は client 自身が spawn するため、shell の `export` は届きません —— client の `env` block に設定してください。生成された backtest code は allowed run roots 内に制限されるので、結果を自分の作業 directory に書き出すには `VIBE_TRADING_ALLOWED_RUN_ROOTS` が必要です:
 
@@ -1349,7 +1351,7 @@ vibe-trading-mcp --transport sse   # legacy SSE (deprecated)
 
 </details>
 
-**公開される MCP tools（76）:** `list_skills`, `load_skill`, `start_research_goal`, `get_research_goal`, `add_goal_evidence`, `update_research_goal_status`, `backtest`, `factor_analysis`, `alpha_zoo`, `alpha_bench`, `analyze_options`, `analyze_options_payoff`, `pattern_recognition`, `read_url`, `read_document`, `web_search`, `write_file`, `read_file`, `read_run_artifact`, `list_strategies`, `query_strategies`, `get_strategy_evidence`, `refresh_strategy_evidence`, `list_swarm_presets`, `run_swarm`, `get_market_data`, `get_fund_flow`, `get_dragon_tiger`, `get_northbound_flow`, `get_southbound_flow`, `get_margin_trading`, `get_block_trades`, `get_shareholder_count`, `get_lockup_expiry`, `get_sector_info`, `get_research_reports`, `get_stock_news`, `get_sec_filings`, `get_financial_statements`, `get_options_chain`, `get_stock_profile`, `screen_market`, `search_symbol`, `get_macro_series`, `iwencai_search`, `qveris_search`, `qveris_inspect`, `qveris_execute`, `get_institutional_holdings`, `etf_holdings`, `prediction_market`, `research_papers`, `get_swarm_status`, `get_run_result`, `list_runs`, `reap_stale_runs`, `retry_run`, `analyze_trade_journal`, `extract_shadow_strategy`, `run_shadow_backtest`, `render_shadow_report`, `scan_shadow_signals`, `trading_connections`, `trading_select_connection`, `trading_check`, `trading_account`, `trading_positions`, `trading_orders`, `trading_quote`, `trading_history`, `quantlib_call`, `cashflow_performance`, `orderbook_depth`, `sentiment`, `technical_indicators`, `get_fundamentals`.
+**公開される MCP tools（81）:** `list_skills`, `load_skill`, `start_research_goal`, `get_research_goal`, `add_goal_evidence`, `update_research_goal_status`, `backtest`, `factor_analysis`, `alpha_zoo`, `alpha_bench`, `analyze_options`, `analyze_options_payoff`, `pattern_recognition`, `read_url`, `read_document`, `web_search`, `write_file`, `read_file`, `read_run_artifact`, `list_strategies`, `query_strategies`, `get_strategy_evidence`, `refresh_strategy_evidence`, `adapt_strategy`, `list_swarm_presets`, `run_swarm`, `get_market_data`, `get_fund_flow`, `get_dragon_tiger`, `get_northbound_flow`, `get_southbound_flow`, `get_margin_trading`, `get_block_trades`, `get_shareholder_count`, `get_lockup_expiry`, `get_sector_info`, `get_research_reports`, `get_stock_news`, `get_sec_filings`, `get_financial_statements`, `get_options_chain`, `get_stock_profile`, `screen_market`, `search_symbol`, `get_macro_series`, `iwencai_search`, `qveris_search`, `qveris_inspect`, `qveris_execute`, `get_institutional_holdings`, `etf_holdings`, `prediction_market`, `research_papers`, `get_swarm_status`, `get_run_result`, `list_runs`, `reap_stale_runs`, `retry_run`, `analyze_trade_journal`, `extract_shadow_strategy`, `run_shadow_backtest`, `render_shadow_report`, `scan_shadow_signals`, `trading_connections`, `trading_select_connection`, `trading_check`, `trading_account`, `trading_positions`, `trading_orders`, `trading_quote`, `trading_history`, `quantlib_call`, `cashflow_performance`, `orderbook_depth`, `sentiment`, `technical_indicators`, `get_fundamentals`, `get_fund_nav`, `get_cn_macro_series`, `get_cn_announcements`, `search_broker_reports`.
 
 ### SWARM の外部 MCP tools
 
@@ -1715,7 +1717,7 @@ Vibe-Trading/
 ├── agent/                          # バックエンド (Python)
 │   ├── cli/                        # CLI パッケージ — インタラクティブ TUI + サブコマンド
 │   ├── api_server.py               # FastAPI サーバー — runs、sessions、upload、swarm、SSE
-│   ├── mcp_server.py               # MCP サーバー — OpenClaw / Claude Desktop 向け 76 tools
+│   ├── mcp_server.py               # MCP サーバー — OpenClaw / Claude Desktop 向け 81 tools
 │   │
 │   ├── src/
 │   │   ├── agent/                  # ReAct エージェントコア
