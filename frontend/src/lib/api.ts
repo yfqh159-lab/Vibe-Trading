@@ -939,6 +939,32 @@ export interface ListLLMModelsRequest {
   refresh?: boolean;
 }
 
+export interface CustomProviderProfile {
+  id: string;
+  label: string;
+  base_url: string;
+  model: string;
+  api_key_configured: boolean;
+  active: boolean;
+  last_tested_at?: string | null;
+}
+
+export interface CustomProviderTestResponse {
+  status: "ok";
+  test_id: string;
+  response_preview: string;
+  latency_ms: number;
+}
+
+export interface CustomProviderSaveRequest {
+  id: string;
+  label: string;
+  base_url: string;
+  model: string;
+  api_key: string;
+  test_id: string;
+}
+
 export interface LLMModelsResponse {
   provider: string;
   models: string[];
