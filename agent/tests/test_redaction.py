@@ -150,6 +150,16 @@ _CREDENTIAL_SHAPES = (
     ("authorization=raw-token-value", "authorization=[redacted]"),
     ("Authorization: Bearer eyJhbGciOi.J9-_x==", "Authorization: Bearer [redacted]"),
     ("bearer abc123", "bearer [redacted]"),
+    # Basic and other non-bearer schemes: the base64 credential follows the
+    # scheme word, so the pair is redacted together, not just the word.
+    ("Authorization: Basic dXNlcjpwYXNz", "Authorization: Basic [redacted]"),
+    (
+        "Proxy-Authorization: Basic dXNlcjpwYXNz",
+        "Proxy-Authorization: Basic [redacted]",
+    ),
+    ("authorization=Basic dXNlcjpwYXNz", "authorization=Basic [redacted]"),
+    ("Authorization: token ghp_example", "Authorization: token [redacted]"),
+    ('{"Authorization": "Basic dXNlcjpwYXNz"}', '{"Authorization": "[redacted]"}'),
     # Env-style names: the label is a suffix of a longer identifier, so the
     # leading word boundary used to reject it (``_`` is a word character).
     ("TUSHARE_TOKEN=abc123", "TUSHARE_TOKEN=[redacted]"),
@@ -233,6 +243,9 @@ def test_redact_text_is_idempotent(raw: str) -> None:
         '{"url":"https://api.x.com","email":"bob@x.com"}',
         # A short SSH username is not a credential; keep it readable.
         "git+ssh://git@github.com/org/repo.git",
+        # ``basic`` and ``authorization`` alone are prose, not a credential.
+        "Show basic information for the backtest",
+        "authorization server returned 200 OK",
     ],
 )
 def test_redact_text_leaves_benign_output_readable(raw: str) -> None:

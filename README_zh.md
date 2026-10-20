@@ -52,14 +52,27 @@
 
 > ⚠️ **安全警告：** X 账号 `VibeTrading_HKU`、Virtuals 项目 `101845` 及代币合约 `0x640BDBF77b6447E8b7DB7894cED84BD1c40571f4` 均非 Vibe-Trading 官方。我们从未发行或背书任何代币或 meme 币。请勿购买、连接钱包或签名。[详细说明](SECURITY.md#official-channels--impersonation)。
 
+- **2026-10-19** 🛠️ **九项金融计算修复**：纠正因子衰减的新旧数据权重、A 股板块涨跌幅与北交所代码识别、SEC 第四季度流量推导及事件研究估计窗口。保留富途持仓代码身份和极小 MACD／布林带数值；拒绝负特异方差，让 Yahoo 外汇代码使用对应货币对的点差与隔夜费（[#1912](https://github.com/HKUDS/Vibe-Trading/pull/1912)、[#1920](https://github.com/HKUDS/Vibe-Trading/pull/1920)、[#1930](https://github.com/HKUDS/Vibe-Trading/pull/1930)）。完整九项修复与限制见 [CHANGELOG](CHANGELOG.md)。
+
+- **2026-10-17** 🛠️ **Token 用量与研究可靠性**：运行详情、聊天和 swarm 展示模型用量（[#1890](https://github.com/HKUDS/Vibe-Trading/pull/1890)）。研究任务与可选后台任务采用共享调度内核（[#1893](https://github.com/HKUDS/Vibe-Trading/pull/1893)），实盘调度保持不变。修复交易日志日期时间配对、证据路径、因子并列值、记忆目录、数值错误处理与渠道进度。详见 [CHANGELOG](CHANGELOG.md)。
+
+- **2026-10-16** 🛠️ **凭据安全与金融计算修复**：扩大渠道及模型凭据脱敏覆盖（[#1880](https://github.com/HKUDS/Vibe-Trading/pull/1880)），本地数据修改后刷新行情缓存（[#1879](https://github.com/HKUDS/Vibe-Trading/pull/1879)），反向开仓手续费只计一次（[#1891](https://github.com/HKUDS/Vibe-Trading/pull/1891)）。修正欧洲格式交易金额、严格 JSON、零值及负值比较、持仓周期、最低权重、平台型峰谷识别与报告路径。详见 [CHANGELOG](CHANGELOG.md)。
+
+- **2026-10-15** 🛠️ **模型费用控制与研究可靠性**：实盘执行程序每次决策使用独立会话，支持可配置频率与持久化每日用量预算（[#1854](https://github.com/HKUDS/Vibe-Trading/issues/1854)）。回测采用轻量预览，同时保留完整交易记录（[#1853](https://github.com/HKUDS/Vibe-Trading/pull/1853)、[#1865](https://github.com/HKUDS/Vibe-Trading/pull/1865)）。修正百分比证据运算、复制回测历史去重、波峰波谷信号时点、加密货币路由与凭证脱敏。范围及限制见 [CHANGELOG](CHANGELOG.md)。
+
+- **2026-10-14** 🛠️ **回测、搜索与文档读取修复**：风险比率与净值导出纳入首根 K 线盈亏（[#1844](https://github.com/HKUDS/Vibe-Trading/pull/1844)）。会话搜索按不同会话返回结果，保留标题并展示匹配上下文（[#1827](https://github.com/HKUDS/Vibe-Trading/pull/1827)、[#1834](https://github.com/HKUDS/Vibe-Trading/pull/1834)）。改进 PDF／Office 内容提取，拒绝无法解析的证据引用，并加强金融计算输入校验与凭证脱敏。
+
+<details>
+<summary>更早的新闻</summary>
+
+- **2026-10-13** 🧩 **组合导入、策略适配与研究工具**：只读导入 extraETF 持仓，支持带日期的欧元估值与配置建议；适配后的子策略使用自己的回测证据（[#1170](https://github.com/HKUDS/Vibe-Trading/issues/1170)、[#1149](https://github.com/HKUDS/Vibe-Trading/issues/1149)）。新增经测试的自定义模型端点、共享的 Pixel Office 手动任务板、波斯语／土耳其语界面、mStock 只读查询及聚源研究数据。
+  修正按结算币种记账、富途市场选择与成本口径、港股逐标的每手股数、已保存的验证参数和运行进度；完成声明式数值核验与 Agent 循环拆分。mStock 暂不纳入组合汇总，Robinhood 期权执行仍不可用。范围与限制见 [CHANGELOG](CHANGELOG.md)。
+
 - **2026-10-12** 🧮 **研究与回测更新**：修正开仓成交、清仓时归因、回撤时长、估值容差及因子 IC 的 SEC 财报可见时点（[#1780](https://github.com/HKUDS/Vibe-Trading/pull/1780)–[#1794](https://github.com/HKUDS/Vibe-Trading/pull/1794)）。新增 13 个基本面／估值因子、巴西数据与回测、需显式启用的 ZimaOS 模板，以及飞书运行进度。范围与数据限制见 [CHANGELOG](CHANGELOG.md)。
 
 - **2026-10-11** 🛠️ **五项优先修复**：派生数字的每个数据操作数都须有证据，不支持的实盘期权继续拦截。离线基准保持指定数据源，交易记录区分零盈亏平仓，Codex 工具保留可选参数（[#1622](https://github.com/HKUDS/Vibe-Trading/issues/1622)、[#1779](https://github.com/HKUDS/Vibe-Trading/pull/1779)、[#1781](https://github.com/HKUDS/Vibe-Trading/pull/1781)、[#1785](https://github.com/HKUDS/Vibe-Trading/pull/1785)）。
 
 - **2026-10-10** 🛠️ **Slack/Discord 配置与可复现研究**：本地化配置表单可测试机器人凭证，测试不会保存改动（[#1764](https://github.com/HKUDS/Vibe-Trading/pull/1764)、[#1777](https://github.com/HKUDS/Vibe-Trading/pull/1777)）。组合研究可复用不可变快照，Web 可导出脱敏 JSON（[#1769](https://github.com/HKUDS/Vibe-Trading/pull/1769)）。技术指标报告日期边界和输入指纹；损坏的会话记录可恢复且不重写原文件。另修复记忆召回、凭证脱敏和交易流水格式识别。详见 [CHANGELOG](CHANGELOG.md)。
-
-<details>
-<summary>更早的新闻</summary>
 
 - **2026-10-09** 🛠️ **渠道设置与回测修正**：原地更新渠道设置时保留 URL 内嵌凭证和微信认证后的服务地址，Web 以九种语言说明保存与重启结果（[#1737](https://github.com/HKUDS/Vibe-Trading/pull/1737)、[#1742](https://github.com/HKUDS/Vibe-Trading/pull/1742)、[#1744](https://github.com/HKUDS/Vibe-Trading/pull/1744)）。跨市场期权波动率仅使用截至当前时点的时间戳，回撤纳入初始资金。修正加密货币／贵金属数据源路由、港股重复识别、缓存恢复、科学计数金额解析及缺失净值验证；mootdx 移出默认 A 股链。全部十三项 PR 见 [CHANGELOG](CHANGELOG.md)。
 
@@ -1727,7 +1740,7 @@ Vibe-Trading/
 │   │   ├── memory/                 # 跨 session 持久记忆
 │   │   │   └── persistent.py       #   基于文件的记忆（~/.vibe-trading/memory/）
 │   │   │
-│   │   ├── tools/                  # 110 个自动发现的 agent 工具
+│   │   ├── tools/                  # 112 个自动发现的 agent 工具
 │   │   │   ├── backtest_tool.py    #   运行回测
 │   │   │   ├── remember_tool.py    #   跨 session 记忆（save/recall/forget）
 │   │   │   ├── skill_writer_tool.py #  skill CRUD（save/patch/delete/file）

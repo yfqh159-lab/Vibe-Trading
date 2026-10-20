@@ -196,7 +196,10 @@ class ChannelRuntime:
             from src.channels.attempt_progress import AttemptProgress
 
             events = getattr(self.session_service, "event_bus", None)
-            progress = (AttemptProgress(self.bus, events, msg, session_id, attempt_id)
+            is_visible = (partial(self.manager.should_send_progress, msg.channel)
+                          if self.manager is not None else None)
+            progress = (AttemptProgress(self.bus, events, msg, session_id, attempt_id,
+                                        is_visible=is_visible)
                         if events is not None and attempt_id else None)
             try:
                 reply = await self._wait_for_reply(session_id, attempt_id, progress=progress)

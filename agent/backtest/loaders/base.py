@@ -734,6 +734,10 @@ def _read_loader_cache_frame(
         # dated series into row numbers and drops its adjustment/currency.
         if not isinstance(metadata, dict) or metadata.get("version") != _LOADER_CACHE_VERSION:
             raise ValueError("missing or incompatible cache metadata version")
+        if source_revision is not None and metadata.get("source_revision") != source_revision:
+            return None
+        if source_revision is not None and metadata.get("cache_file_identity") != _cache_file_identity(cache_path):
+            return None
         index_columns = metadata.get("index_columns")
         index_names = metadata.get("index_names")
         frame_attrs = metadata.get("frame_attrs")
@@ -771,6 +775,8 @@ def _read_loader_cache_frame(
             con.close()
 
     try:
+        if source_revision is not None and metadata.get("cache_file_identity") != _cache_file_identity(cache_path):
+            return None
         index_columns = metadata.get("index_columns") or []
         if index_columns:
             missing = [

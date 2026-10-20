@@ -37,6 +37,10 @@ class PortfolioSummaryTool(BaseTool):
                     "immutable observation instead of the latest one."
                 ),
             },
+            "target_weights": {
+                "type": "object", "additionalProperties": {"type": "number"},
+                "description": "Optional user-defined allocation fractions summing to 1, keyed by holdings canonical_id or CASH. Requires snapshot_id. Returns value-only proposals; never sends orders. Do not invent user targets.",
+            },
         },
         "required": [],
     }

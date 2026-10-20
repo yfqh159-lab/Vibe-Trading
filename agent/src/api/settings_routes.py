@@ -436,6 +436,19 @@ def _build_llm_settings_response(
             authenticated, auth_status = False, ""
         api_key_configured = authenticated
         api_key_hint = auth_status if authenticated else None
+    options = LLM_PROVIDERS
+    if provider_name == "custom":
+        from src.providers.custom_profiles import CustomProviderStore
+
+        active = next((p for p in CustomProviderStore().list_public() if p["active"]), None)
+        active_model = active["model"] if active else env_values.get("LANGCHAIN_MODEL_NAME", "")
+        active_url = active["base_url"] if active else ""
+        provider = LLMProviderOption(name="custom", label="Custom (credential vault)",
+            api_key_env=None, base_url_env="OPENAI_BASE_URL", default_model=active_model,
+            default_base_url=active_url, auth_type="credential_vault", reasoning_efforts=[])
+        env_values = {**env_values, "LANGCHAIN_MODEL_NAME": active_model, "OPENAI_BASE_URL": active_url}
+        api_key_configured, api_key_hint = bool(active and active["api_key_configured"]), None
+        options = [*LLM_PROVIDERS, provider]
     return LLMSettingsResponse(
         provider=provider.name,
         model_name=env_values.get("LANGCHAIN_MODEL_NAME", provider.default_model),
@@ -582,6 +595,9 @@ def _sync_runtime_env(provider: LLMProviderOption, updates: Dict[str, str]) -> N
         else:
             os.environ.pop(key, None)
 
+    if provider.auth_type == "credential_vault":
+        reset_env_config()
+        return
     if provider.auth_type in {"gh_cli", "claude_cli"}:
         # The Copilot SDK / Claude Code CLI own credential discovery and transport.
         os.environ.pop("OPENAI_API_KEY", None)

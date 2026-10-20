@@ -52,14 +52,27 @@
 
 > ⚠️ **Security warning:** The X account `VibeTrading_HKU`, Virtuals project `101845`, and token contract `0x640BDBF77b6447E8b7DB7894cED84BD1c40571f4` are not official Vibe-Trading assets. We have never launched or endorsed any token or memecoin. Do not buy, connect a wallet, or sign anything. [Details](SECURITY.md#official-channels--impersonation).
 
+- **2026-10-19** 🛠️ **Nine financial correctness fixes**: Correct recency weights in factor decay, A-share board limits and Beijing symbol routing, SEC Q4 flow derivation, and event-study estimation windows. Preserve Futu holdings identity and tiny MACD/Bollinger values; reject negative specific variances and apply pair-specific fees to Yahoo forex symbols ([#1912](https://github.com/HKUDS/Vibe-Trading/pull/1912), [#1920](https://github.com/HKUDS/Vibe-Trading/pull/1920), [#1930](https://github.com/HKUDS/Vibe-Trading/pull/1930)). See [CHANGELOG](CHANGELOG.md) for all nine fixes and limits.
+
+- **2026-10-17** 🛠️ **Token usage and research reliability**: View LLM usage in Run Detail, chat and swarm ([#1890](https://github.com/HKUDS/Vibe-Trading/pull/1890)). Shared scheduling now powers research and optional background jobs ([#1893](https://github.com/HKUDS/Vibe-Trading/pull/1893)); live scheduling is unchanged. Fix journal date/time pairing, evidence paths, factor ties, memory roots, numeric error handling and channel progress. See [CHANGELOG](CHANGELOG.md).
+
+- **2026-10-16** 🛠️ **Credential safety and financial correctness**: Scrub more channel/provider secrets ([#1880](https://github.com/HKUDS/Vibe-Trading/pull/1880)), refresh cached local bars after source edits ([#1879](https://github.com/HKUDS/Vibe-Trading/pull/1879)), and allocate reversal fees once ([#1891](https://github.com/HKUDS/Vibe-Trading/pull/1891)). Correct European journal amounts, strict JSON, zero/negative comparisons, holding periods, weight floors, plateau detection and report paths. See [CHANGELOG](CHANGELOG.md).
+
+- **2026-10-15** 🛠️ **Model spending controls and research reliability**: Live runners use independent decision sessions with configurable cadence and persistent daily usage budgets ([#1854](https://github.com/HKUDS/Vibe-Trading/issues/1854)). Lightweight backtest previews preserve complete trade history ([#1853](https://github.com/HKUDS/Vibe-Trading/pull/1853), [#1865](https://github.com/HKUDS/Vibe-Trading/pull/1865)). Fix percentage evidence arithmetic, copied-run history deduplication, swing-signal timing, crypto routing and credential redaction. See [CHANGELOG](CHANGELOG.md) for scope and limits.
+
+- **2026-10-14** 🛠️ **Backtest, search and document fixes**: Risk ratios and equity exports now include first-bar PnL ([#1844](https://github.com/HKUDS/Vibe-Trading/pull/1844)). Session search returns distinct sessions with preserved titles and contextual snippets ([#1827](https://github.com/HKUDS/Vibe-Trading/pull/1827), [#1834](https://github.com/HKUDS/Vibe-Trading/pull/1834)). Improve PDF/Office extraction, reject unresolved evidence references, and strengthen financial-input validation and credential redaction.
+
+<details>
+<summary>Earlier news</summary>
+
+- **2026-10-13** 🧩 **Portfolio imports, strategy adaptation and research tools**: Read-only extraETF holdings imports support dated EUR valuation and allocation proposals; adapted strategies get their own backtest evidence ([#1170](https://github.com/HKUDS/Vibe-Trading/issues/1170), [#1149](https://github.com/HKUDS/Vibe-Trading/issues/1149)). Add tested custom model endpoints, a shared manual Pixel Office task board, Persian/Turkish UI, mStock read-only queries and Gildata research data.
+  Fix settlement-currency accounting, Futu market selection and cost basis, per-symbol HK board lots, saved validation settings and run progress. Complete declared grounding checks and the agent-loop split. mStock remains excluded from portfolio aggregation; Robinhood options execution remains unavailable. See [CHANGELOG](CHANGELOG.md) for scope and limits.
+
 - **2026-10-12** 🧮 **Research and backtest updates**: Correct opening fills, liquidation-time attribution, drawdown duration, valuation tolerances and SEC filing timing in factor IC ([#1780](https://github.com/HKUDS/Vibe-Trading/pull/1780)–[#1794](https://github.com/HKUDS/Vibe-Trading/pull/1794)). Add 13 fundamental/valuation factors, Brazil data and backtests, opt-in ZimaOS templates, and Feishu run progress. See [CHANGELOG](CHANGELOG.md) for scope and data limitations.
 
 - **2026-10-11** 🛠️ **Five priority fixes**: Derived figures require evidence for every data operand; unsupported live options stay blocked. Offline benchmarks retain their selected source, trade artifacts distinguish break-even exits, and Codex tools preserve optional arguments ([#1622](https://github.com/HKUDS/Vibe-Trading/issues/1622), [#1779](https://github.com/HKUDS/Vibe-Trading/pull/1779), [#1781](https://github.com/HKUDS/Vibe-Trading/pull/1781), [#1785](https://github.com/HKUDS/Vibe-Trading/pull/1785)).
 
 - **2026-10-10** 🛠️ **Slack/Discord setup and reproducible research**: Localized channel forms verify bot credentials without saving changes ([#1764](https://github.com/HKUDS/Vibe-Trading/pull/1764), [#1777](https://github.com/HKUDS/Vibe-Trading/pull/1777)). Portfolio research can reuse an immutable snapshot, and Web exports its sanitized JSON ([#1769](https://github.com/HKUDS/Vibe-Trading/pull/1769)). Indicators report their date boundary and exact input fingerprint; corrupted session records recover without rewriting files. Memory recall, credential redaction and trade-journal detection are corrected. See [CHANGELOG](CHANGELOG.md).
-
-<details>
-<summary>Earlier news</summary>
 
 - **2026-10-09** 🛠️ **Channel updates and backtest correctness**: Channel settings preserve embedded URL credentials and authenticated WeChat endpoints during in-place updates, with save/reset feedback in all nine languages ([#1737](https://github.com/HKUDS/Vibe-Trading/pull/1737), [#1742](https://github.com/HKUDS/Vibe-Trading/pull/1742), [#1744](https://github.com/HKUDS/Vibe-Trading/pull/1744)). Cross-market option volatility uses only timestamps known at each bar; drawdown includes starting capital. Crypto/precious-metal routing, HK duplicate detection, cache recovery, scientific-notation amounts and missing-equity validation are corrected. mootdx leaves the default A-share chain. See [CHANGELOG](CHANGELOG.md) for all thirteen PRs.
 
@@ -1080,7 +1093,7 @@ LANGCHAIN_MODEL_NAME=claude-opus-5-5
 
 > **Warning:** Both settings are convenience filters, not a security boundary. `python -c` can still run arbitrary code, and external MCP tools (`mcp_<server>_<tool>`) are not covered by the default prefixes. Live orders stay bound by the mandate gate and kill switch whatever these settings allow.
 
-> **Note:** When Settings shows this provider, it loads the models your Claude Code login can run (cached for 5 minutes; **Load models** refreshes), and the reasoning effort menu offers only the levels the selected model accepts. The chosen level is passed to each `claude -p` call as `--effort`; it does not read or change `~/.claude/settings.json`, and "Provider default" means the model's own default. Base URL, temperature and `MAX_RETRIES` have no effect with this provider, and `TIMEOUT_SECONDS` is raised to at least 600 seconds per decision. Image input is not supported. The CLI returns each decision in one piece, so a decision longer than `VIBE_TRADING_SSE_TIMEOUT` (default 90 seconds) makes the Web UI report a timeout while the run continues; raise that value if you use high effort levels.
+> **Note:** When Settings shows this provider, it loads the models your Claude Code login can run (cached for 5 minutes; **Load models** refreshes), and the reasoning effort menu offers only the levels the selected model accepts. The chosen level is passed to each `claude -p` call as `--effort`; it does not read or change `~/.claude/settings.json`, and "Provider default" means the model's own default. Base URL, temperature and `MAX_RETRIES` have no effect with this provider, and `TIMEOUT_SECONDS` is raised to at least 600 seconds per decision. Image input is not supported. The CLI returns each decision in one piece; while it runs, provider waiting events keep the Web UI active. Transport keepalives alone do not suppress `VIBE_TRADING_SSE_TIMEOUT` (default 90 seconds), and cancellation and the per-decision deadline remain enforced.
 
 ### Path A: Docker (zero setup)
 
@@ -1376,11 +1389,23 @@ Saves write the `channels.<name>` section of `~/.vibe-trading/agent.json` atomic
 
 ### Strategy & Backtesting
 
+Average holding period includes completed same-bar trades (zero bars). The
+existing `avg_holding_days` compatibility key reports the engine's holding-bar
+measure; it is not a conversion to calendar days.
+
+Standalone revalidation (`python -m backtest.validation <run_dir>`) runs all
+three validation tools using saved `config.json` validation parameters; missing
+parameters use the existing defaults. This includes simulation counts, seeds,
+bootstrap confidence, and walk-forward window count.
+
 New BaseEngine `artifacts/trades.csv` files include an `event` column:
 `entry` marks an opening row and `exit` marks a completed trade, including
 zero-PnL exits. Validation and strategy-discovery readers use this marker.
 Files without it retain legacy loading; their zero-PnL exits remain ambiguous.
-The separate options-engine trade format is unchanged.
+The separate options-engine trade format is unchanged. Validation also recovers entry dates from
+matching adjacent `entry`/`exit` rows, so walk-forward trade counts and win rates
+retain entry-window attribution after reload. Unmarked or unmatched rows keep
+the legacy timestamp fallback.
 
 ```bash
 # Moving average crossover on US equities
@@ -2192,7 +2217,7 @@ Vibe-Trading/
 │   │   ├── memory/                 # Cross-session persistent memory
 │   │   │   └── persistent.py       #   file-based memory (~/.vibe-trading/memory/)
 │   │   │
-│   │   ├── tools/                  # 110 auto-discovered agent tools
+│   │   ├── tools/                  # 112 auto-discovered agent tools
 │   │   │   ├── backtest_tool.py    #   run backtests
 │   │   │   ├── remember_tool.py    #   cross-session memory (save/recall/forget)
 │   │   │   ├── skill_writer_tool.py #  skill CRUD (save/patch/delete/file)

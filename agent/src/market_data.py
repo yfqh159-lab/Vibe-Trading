@@ -89,7 +89,7 @@ def detect_source(code: str) -> str:
 def normalize_crypto_symbol(code: str) -> str:
     """Normalize USDT spot aliases without changing the requested quote asset."""
     cleaned = code.strip().upper()
-    match = re.fullmatch(r"([A-Z]{2,})[-/]?USDT", cleaned)
+    match = re.fullmatch(r"((?!\d+[-/]?USDT)[A-Z0-9]{2,})[-/]?USDT", cleaned)
     return f"{match.group(1)}-USDT" if match else code
 
 
