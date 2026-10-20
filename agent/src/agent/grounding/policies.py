@@ -613,12 +613,12 @@ class _PolicyMixin:
             checked_price = True
             if role == "derived":
                 issues.extend(
-                    self._check_derived(figure, declaration, symbol, records, scalar_parameters)
+                    GROUNDING_CHECKS.run("figure-derived", self, figure, declaration, symbol, records, scalar_parameters)
                 )
                 continue
             if role == "proposed":
                 issues.extend(
-                    self._check_proposed(figure, declaration, symbol, records, scalar_parameters)
+                    GROUNDING_CHECKS.run("figure-proposed", self, figure, declaration, symbol, records, scalar_parameters)
                 )
                 continue
             issues.extend(GROUNDING_CHECKS.run("figure-observed", self, figure, declaration, symbol, records))
@@ -1872,16 +1872,23 @@ class _PolicyMixin:
         records: Sequence[EvidenceRecord],
         *,
         money: bool = False,
+        currency_code: str | None = None,
+        percent: bool = False,
         scalar_parameters: Sequence[float] = (),
-    ) -> tuple[float, list[float]] | str | None:
+    ) -> tuple[float, list[float], bool] | str | None:
         """Evaluate a declaration's note as an observation-anchored formula.
 
-        Returns the ``(result, operands)`` pair when the note is arithmetic
-        over at least two operands. Data operands must be observed; chosen
-        scalar parameters must be declared and visible. Every added or
+        Returns the ``(result, operands, points)`` triple when the note is
+        arithmetic over at least two operands. Data operands must be observed;
+        chosen scalar parameters must be declared and visible. Every added or
         subtracted term still needs an observed anchor. Literal 1 is the
         multiplicative identity (also used in ratio-minus-one expressions),
         and square/cube exponents belong to the operator, not the operands.
+        A percent claim's explicit trailing *100 is normalized as a unit
+        conversion before checking the remaining data operands. ``points`` is
+        True when every data operand anchored only to percent-named fields
+        (``changepercent`` and friends already carry points, #1820), so the
+        caller compares the result against the percent figure directly.
         """
         if declaration is None or not declaration.note.strip():
             return "no_formula"
@@ -1993,7 +2000,91 @@ class _PolicyMixin:
             for operand in operands
         ):
             return "operand_not_observed"
-        return result, operands
+        # The result's unit follows the evidence the operands anchored to:
+        # percent-named fields already carry points (#1820), an explicit
+        # trailing *100 was normalized above, anything else is a fraction.
+        points = (
+            percent
+            and self._operands_read_as_points(
+                operands, symbol, records, scalar_parameters
+            )
+        )
+        if points:
+            # Convert the inputs before evaluating: two point-valued inputs
+            # divided by each other yield a fraction, not another point value.
+            # Keep the original magnitudes for all anchoring checks above.
+            def as_fraction(value: float) -> float:
+                if any(
+                    math.isclose(abs(value), abs(parameter), rel_tol=1e-12, abs_tol=0.0)
+                    for parameter in scalar_parameters
+                ):
+                    return value
+                return value / 100.0
+
+            normalized = _evaluate_formula(ast.unparse(tree), operand_transform=as_fraction)
+            if normalized is None:
+                return "formula_not_evaluable"
+            result = normalized[0] * 100.0
+        return result, operands, points
+
+    def _operands_read_as_points(
+        self,
+        operands: Sequence[float],
+        symbol: str | None,
+        records: Sequence[EvidenceRecord],
+        scalar_parameters: Sequence[float],
+    ) -> bool:
+        """Whether every data operand anchored only to percent-named fields.
+
+        A field named ``changepercent`` already carries percentage points, so
+        a formula over such fields evaluates in points and a percent figure
+        must meet the result directly, not ``result * 100``. Conservative by
+        construction: an operand whose magnitude also appears under a
+        non-percent field makes the unit undecidable, and the caller keeps
+        the fraction reading.
+        """
+        data = [
+            operand
+            for operand in operands
+            if not any(
+                math.isclose(abs(operand), abs(parameter), rel_tol=1e-12, abs_tol=0.0)
+                for parameter in scalar_parameters
+            )
+        ]
+        if not data:
+            return False
+        candidates = list(self._price_candidates(symbol, records))
+        candidates += [
+            record
+            for record in self._evidence
+            if record.status == "observed"
+            and record.value is not None
+            and record.tool in {"get_market_data", "bash"}
+            and (not symbol or record.symbol == symbol)
+        ]
+        candidates += [
+            record
+            for record in self._evidence
+            if record.status == "observed"
+            and record.value is not None
+            and _metric_kind_for_path(record.field) is not None
+            and (not symbol or not record.symbol or record.symbol == symbol)
+        ]
+        for operand in data:
+            saw_percent = saw_plain = False
+            for record in candidates:
+                if math.isclose(
+                    abs(float(record.value)), abs(operand), rel_tol=1e-9, abs_tol=1e-12
+                ):
+                    if _is_percent_field(record.field):
+                        saw_percent = True
+                    else:
+                        saw_plain = True
+            if operand == 1 and not saw_percent and not saw_plain:
+                continue  # Structural multiplicative identity, not a data unit.
+            if not saw_percent or saw_plain:
+                return False
+        return True
 
     @staticmethod
     def _result_matches(figure: Figure, result: float, *, points: bool = False) -> bool:
@@ -2037,6 +2128,7 @@ class _PolicyMixin:
         """A derived figure must be the arithmetic its note states."""
         derivation = self._derivation(
             declaration, symbol, records, money=figure.currency,
+            currency_code=figure.currency_code, percent=figure.percent,
             scalar_parameters=scalar_parameters,
         )
         if isinstance(derivation, str):
@@ -2131,6 +2223,7 @@ class _PolicyMixin:
             ]
         derivation = self._derivation(
             declaration, symbol, records, money=figure.currency,
+            currency_code=figure.currency_code, percent=figure.percent,
             scalar_parameters=scalar_parameters,
         )
         if not isinstance(derivation, str) and self._result_matches(figure, derivation[0]):
