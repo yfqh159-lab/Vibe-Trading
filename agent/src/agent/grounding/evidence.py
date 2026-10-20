@@ -15,6 +15,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Mapping
 
+from src.agent.grounding.figures import _CURRENCY_CODES
 from src.agent.grounding.identity import (
     _CANONICAL_SYMBOL_RE,
     _infer_currency,
@@ -668,7 +669,14 @@ def _is_price_kind(record: EvidenceRecord) -> bool:
         amount/turnover leaves.
     """
     return (
-        record.field in _PRICE_FIELDS
+        (
+            record.tool == "get_sec_filings"
+            and record.source == "sec_edgar"
+            and record.field.startswith("data.metric.points[")
+            and record.field.endswith("].val")
+            and record.currency is not None
+        )
+        or record.field in _PRICE_FIELDS
         or _price_field_for_path(record.field) is not None
         or _is_registered_price_indicator(record.tool, record.field)
         or _leaf_name(record.field) in _AMOUNT_FIELDS
@@ -1220,6 +1228,11 @@ class _EvidenceMixin:
         source = str(payload.get("source") or tool_name)
         remaining = _MAX_GENERIC_EVIDENCE
         timestamp_fields = (*_TIMESTAMP_FIELDS, "latest_date", "as_of")
+        data = payload.get("data")
+        metric = data.get("metric") if isinstance(data, dict) else None
+        unit = metric.get("unit") if isinstance(metric, dict) else None
+        unit = unit.strip().upper() if isinstance(unit, str) else None
+        metric_currency = {"RMB": "CNY", "CNH": "CNY"}.get(unit, unit) if unit in _CURRENCY_CODES else None
 
         def visit(value: Any, path: str, timestamp: str | None = None) -> None:
             nonlocal remaining
@@ -1236,7 +1249,13 @@ class _EvidenceMixin:
                         field=path or "value",
                         value=value,
                         status="observed",
-                        currency=_infer_currency(symbol or ""),
+                        currency=(
+                            metric_currency
+                            if tool_name == "get_sec_filings"
+                            and path.startswith("data.metric.points[")
+                            and path.endswith("].val")
+                            else _infer_currency(symbol or "")
+                        ),
                         venue=_infer_venue(symbol or ""),
                     )
                 )

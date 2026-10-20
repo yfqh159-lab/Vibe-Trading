@@ -85,6 +85,7 @@ _CURRENCY_CODES = frozenset(
     {
         "USD", "CNY", "CNH", "RMB", "HKD", "JPY", "EUR", "GBP", "KRW", "INR",
         "CAD", "AUD", "SGD", "TWD", "THB", "IRR", "IRT", "USDT", "USDC",
+        "CHF", "NZD", "BRL", "ARS", "VND",
     }
 )
 
@@ -209,6 +210,8 @@ class Figure:
     scale: float = 1.0
     # A currency mark or ISO code touches the digits ("$2050", "0.95 元").
     currency: bool = False
+    # Unambiguous ISO currency identity; None for ambiguous or absent markers.
+    currency_code: str | None = None
     digits: str = ""
     sign: str = ""
     # The span a redaction replaces: the figure plus its glued currency and
@@ -874,6 +877,45 @@ def _currency_after(text: str, end: int) -> bool:
     return code.upper() in _CURRENCY_CODES
 
 
+def _currency_code_for_figure(text: str, start: int, end: int) -> str | None:
+    """Identify an unambiguous currency immediately adjacent to a number."""
+    head = text[:start].rstrip()
+    tail = text[end:].lstrip()
+
+    # Explicit ISO currency codes take precedence.
+    prefix = _code_before(head)
+    if prefix:
+        return {"CNH": "CNY", "RMB": "CNY"}.get(prefix, prefix)
+
+    suffix = ""
+    for char in tail:
+        if not char.isascii() or not char.isalpha():
+            break
+        suffix += char
+
+    if suffix.upper() in _CURRENCY_CODES:
+        code = suffix.upper()
+        return {"CNH": "CNY", "RMB": "CNY"}.get(code, code)
+
+    # Only unambiguous symbols and words can establish currency identity.
+    if head.endswith("€") or tail.startswith("€"):
+        return "EUR"
+    if head.endswith("£") or tail.startswith("£"):
+        return "GBP"
+    if head.endswith("₩") or tail.startswith("₩"):
+        return "KRW"
+    if head.endswith("₹") or tail.startswith("₹"):
+        return "INR"
+    # Match complete currency units, not the opening of an unrelated word.
+    word = _cjk_run(tail)
+    if word in {"人民币", "美元", "円"}:
+        return {"人民币": "CNY", "美元": "USD", "円": "JPY"}[word]
+    if tail.startswith("원") and (len(tail) == 1 or not tail[1].isalpha()):
+        return "KRW"
+
+    return None
+
+
 def magnitude_suffix(text: str, end: int) -> tuple[float, int]:
     """The magnitude mark glued to the right of a figure, if any.
 
@@ -1095,7 +1137,9 @@ def scan_figures(content: str, block: FiguresBlock) -> list[Figure]:
         cell = next((entry for entry in cells if entry[0] <= start and end <= entry[1]), None)
         row, position = (cell[2], cell[3]) if cell else (None, None)
         structural = row is not None and position in (row.date_column, row.symbol_column)
-        currency = _currency_before(text, token.start) or _currency_after(text, token.end)
+        currency_end = magnitude_suffix(text, token.end)[1]
+        currency = _currency_before(text, token.start) or _currency_after(text, currency_end)
+        currency_code = _currency_code_for_figure(text, token.start, currency_end)
         marked = percent or currency or "." in token.digits or token.grouped
         # A cell that also holds a word is prose set in a table: its plain
         # integer is a count or a horizon, as it would be in a sentence (#1471).
@@ -1139,6 +1183,7 @@ def scan_figures(content: str, block: FiguresBlock) -> list[Figure]:
                 symbol=symbol_value,
                 scale=1.0 if percent else magnitude_suffix(text, token.end)[0],
                 currency=currency,
+                currency_code=currency_code,
                 digits=token.digits,
                 sign=token.sign,
                 extent=(view.start(_currency_prefix_start(text, token.start)), view.end(mark_end)),
