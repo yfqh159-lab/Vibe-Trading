@@ -1793,6 +1793,28 @@
     "done": "完成",
     "steps": "{{count}} 个步骤"
   },
+  "runnerBudget": {
+    "unavailable": "预算信息不可用",
+    "warning": "该运行器已启用支出上限。",
+    "summary": "每 {{minutes}} 分钟 · 每天最多 {{turns}} 轮 · {{tokens}} token/天",
+    "dailySummary": "每日 {{time}} 重置（{{timezone}}）",
+    "usage": "已用 {{turns}} 轮 · {{tokens}} token · {{cost}}",
+    "estimateUnknown": "预计日花费未知",
+    "estimate": "预计日花费：${{cost}}",
+    "configure": "配置预算",
+    "interval_seconds": "检查间隔（秒）",
+    "max_daily_turns": "每日最大轮数",
+    "max_daily_tokens": "每日最大 token 数",
+    "max_daily_cost_usd": "每日最大花费（美元）",
+    "input_usd_per_million": "输入单价（美元 / 百万 token）",
+    "output_usd_per_million": "输出单价（美元 / 百万 token）",
+    "daily_at": "每日重置时间",
+    "timezone": "时区",
+    "save": "保存",
+    "limitsNote": "上限仅约束运行器自身支出，不影响操作者手动操作。",
+    "pricesNote": "花费估算使用上方单价；留空则跳过花费估算。",
+    "stopToEdit": "先停止运行器再修改这些设置。"
+  },
   "runnerStatus": {
     "connectorRuntime": "连接器运行状态",
     "configuredProfiles": "已配置的连接器档案",

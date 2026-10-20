@@ -1798,6 +1798,28 @@
     "done": "Listo",
     "steps": "{{count}} pasos"
   },
+  "runnerBudget": {
+    "unavailable": "Budget information unavailable",
+    "warning": "Spending limits are enforced for this runner.",
+    "summary": "Every {{minutes}} min \u00b7 up to {{turns}} turns/day \u00b7 {{tokens}} tokens/day",
+    "dailySummary": "Daily reset at {{time}} ({{timezone}})",
+    "usage": "Used {{turns}} turns \u00b7 {{tokens}} tokens \u00b7 {{cost}}",
+    "estimateUnknown": "Projected daily cost unknown",
+    "estimate": "Projected daily cost: ${{cost}}",
+    "configure": "Configure budget",
+    "interval_seconds": "Check interval (seconds)",
+    "max_daily_turns": "Max daily turns",
+    "max_daily_tokens": "Max daily tokens",
+    "max_daily_cost_usd": "Max daily cost (USD)",
+    "input_usd_per_million": "Input price (USD / 1M tokens)",
+    "output_usd_per_million": "Output price (USD / 1M tokens)",
+    "daily_at": "Daily reset time",
+    "timezone": "Timezone",
+    "save": "Save",
+    "limitsNote": "Limits apply to the runner's own spending; the operator's manual actions are not affected.",
+    "pricesNote": "Cost estimates use the prices above; leave them blank to skip cost estimation.",
+    "stopToEdit": "Stop the runner to edit these settings."
+  },
   "runnerStatus": {
     "connectorRuntime": "Runtime del conector",
     "configuredProfiles": "Perfiles de runtime del conector configurados",
