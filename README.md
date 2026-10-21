@@ -52,6 +52,8 @@
 
 > ⚠️ **Security warning:** The X account `VibeTrading_HKU`, Virtuals project `101845`, and token contract `0x640BDBF77b6447E8b7DB7894cED84BD1c40571f4` are not official Vibe-Trading assets. We have never launched or endorsed any token or memecoin. Do not buy, connect a wallet, or sign anything. [Details](SECURITY.md#official-channels--impersonation).
 
+- **2026-10-20** 🛠️ **Backtest diagnostics and research correctness**: Warn about unrecognized backtest config keys, show undefined correlations as unknown instead of zero, and reuse the saved annualisation factor when revalidating runs ([#1935](https://github.com/HKUDS/Vibe-Trading/pull/1935), [#1933](https://github.com/HKUDS/Vibe-Trading/pull/1933), [#1915](https://github.com/HKUDS/Vibe-Trading/pull/1915)). Also improve factor sample checks, tool input validation, journal market classification, numeric formatting and WeCom streaming. All 14 fixes and remaining limits are in [CHANGELOG](CHANGELOG.md).
+
 - **2026-10-19** 🛠️ **Nine financial correctness fixes**: Correct recency weights in factor decay, A-share board limits and Beijing symbol routing, SEC Q4 flow derivation, and event-study estimation windows. Preserve Futu holdings identity and tiny MACD/Bollinger values; reject negative specific variances and apply pair-specific fees to Yahoo forex symbols ([#1912](https://github.com/HKUDS/Vibe-Trading/pull/1912), [#1920](https://github.com/HKUDS/Vibe-Trading/pull/1920), [#1930](https://github.com/HKUDS/Vibe-Trading/pull/1930)). See [CHANGELOG](CHANGELOG.md) for all nine fixes and limits.
 
 - **2026-10-17** 🛠️ **Token usage and research reliability**: View LLM usage in Run Detail, chat and swarm ([#1890](https://github.com/HKUDS/Vibe-Trading/pull/1890)). Shared scheduling now powers research and optional background jobs ([#1893](https://github.com/HKUDS/Vibe-Trading/pull/1893)); live scheduling is unchanged. Fix journal date/time pairing, evidence paths, factor ties, memory roots, numeric error handling and channel progress. See [CHANGELOG](CHANGELOG.md).
@@ -1389,6 +1391,28 @@ Saves write the `channels.<name>` section of `~/.vibe-trading/agent.json` atomic
 
 ### Strategy & Backtesting
 
+**Daily paper trading** is available in the Web sidebar (`/paper-trading`),
+`vibe-trading paper`, and the authenticated `/api/paper-accounts` API. Start today
+or next session with configurable cash/positions; settle completed daily bars
+and inspect fills, rejections and NAV history. Strategy history stops before the
+execution date, and each day receives the ledger after preceding fills. The
+agent/MCP `paper_trade_step` remains a stateless research primitive.
+
+Execution uses raw prices (Tencent raw for A-shares/HK, raw-capable US providers).
+A-shares require a complete ClickHouse calendar. Unavailable data/calendar and
+unverified split-like events fail visibly without committing a saved ledger;
+price/volume ratios never authorize multiplying a position. Cash dividends and
+automatic corporate-action reconciliation are not implemented. See the
+[paper-trading guide](agent/src/tools/paper_trade/README.md) for CLI/API examples and model limits.
+
+Daily-engine backtests report engine-specific unused settings in the run-card
+warnings. For example, crypto reads `maker_rate` and `taker_rate`, so supplying
+the A-share `commission_rate` setting warns instead of silently implying that
+it configured crypto fees. Shared runner/loader settings and keys read by a
+composite engine's selected sub-engines remain accepted. This conservative
+source-reader check does not trace conditional branches inside an engine and
+does not change options-engine configuration handling.
+
 Average holding period includes completed same-bar trades (zero bars). The
 existing `avg_holding_days` compatibility key reports the engine's holding-bar
 measure; it is not a conversion to calendar days.
@@ -1480,6 +1504,10 @@ Generic journals accept a complete `datetime` column or separate `date` and
 `time` columns (case-insensitive). Split columns are combined before sorting
 and FIFO matching; Excel date serials and time fractions are supported.
 A complete `datetime` column takes precedence when all three are present.
+Journal analysis rejects missing or invalid dates in any parsed record,
+including dividends, before applying filters. Correct those dates and retry.
+Rows with equal timestamps retain their source-file order for FIFO matching.
+This preserves the supplied sequence; it does not reconstruct missing fill order.
 
 ### Market Research
 
@@ -1708,7 +1736,7 @@ Posting `{}` schedules a template on its own suggested cadence with its declared
 
 ## 🔌 MCP Plugin
 
-Vibe-Trading exposes 81 MCP tools for any MCP-compatible client. Runs as a stdio subprocess — no server setup needed. Core research tools work with zero API keys for HK/US/crypto; trading connector tools use the selected connector profile, and `run_swarm` needs an LLM key.
+Vibe-Trading exposes 82 MCP tools for any MCP-compatible client. Runs as a stdio subprocess — no server setup needed. Core research tools work with zero API keys for HK/US/crypto; trading connector tools use the selected connector profile, and `run_swarm` needs an LLM key.
 
 **Environment variables:** the client spawns the server itself, so a shell `export` never reaches it — set them in the client's `env` block. Generated backtest code is sandboxed to the allowed run roots, so writing results into a workspace of your own needs `VIBE_TRADING_ALLOWED_RUN_ROOTS`:
 
@@ -1777,7 +1805,7 @@ with `--host` / `--port`.
 
 </details>
 
-**MCP tools exposed (81):** `list_skills`, `load_skill`, `start_research_goal`, `get_research_goal`, `add_goal_evidence`, `update_research_goal_status`, `backtest`, `factor_analysis`, `alpha_zoo`, `alpha_bench`, `analyze_options`, `analyze_options_payoff`, `pattern_recognition`, `read_url`, `read_document`, `web_search`, `write_file`, `read_file`, `read_run_artifact`, `list_strategies`, `query_strategies`, `get_strategy_evidence`, `refresh_strategy_evidence`, `adapt_strategy`, `trading_connections`, `trading_select_connection`, `trading_check`, `trading_account`, `trading_positions`, `trading_orders`, `trading_quote`, `trading_history`, `list_swarm_presets`, `run_swarm`, `get_market_data`, `get_fund_flow`, `get_dragon_tiger`, `get_northbound_flow`, `get_southbound_flow`, `get_margin_trading`, `get_block_trades`, `get_shareholder_count`, `get_lockup_expiry`, `get_sector_info`, `get_research_reports`, `get_stock_news`, `get_sec_filings`, `get_financial_statements`, `get_options_chain`, `get_stock_profile`, `screen_market`, `search_symbol`, `get_macro_series`, `iwencai_search`, `qveris_search`, `qveris_inspect`, `qveris_execute`, `get_institutional_holdings`, `etf_holdings`, `prediction_market`, `research_papers`, `get_swarm_status`, `get_run_result`, `list_runs`, `reap_stale_runs`, `retry_run`, `analyze_trade_journal`, `extract_shadow_strategy`, `run_shadow_backtest`, `render_shadow_report`, `scan_shadow_signals`, `quantlib_call`, `cashflow_performance`, `orderbook_depth`, `sentiment`, `technical_indicators`, `get_fundamentals`, `get_fund_nav`, `get_cn_macro_series`, `get_cn_announcements`, `search_broker_reports`.
+**MCP tools exposed (82):** `list_skills`, `load_skill`, `start_research_goal`, `get_research_goal`, `add_goal_evidence`, `update_research_goal_status`, `backtest`, `factor_analysis`, `alpha_zoo`, `alpha_bench`, `analyze_options`, `analyze_options_payoff`, `pattern_recognition`, `read_url`, `read_document`, `web_search`, `write_file`, `read_file`, `read_run_artifact`, `list_strategies`, `query_strategies`, `get_strategy_evidence`, `refresh_strategy_evidence`, `adapt_strategy`, `trading_connections`, `trading_select_connection`, `trading_check`, `trading_account`, `trading_positions`, `trading_orders`, `trading_quote`, `trading_history`, `list_swarm_presets`, `run_swarm`, `get_market_data`, `get_fund_flow`, `get_dragon_tiger`, `get_northbound_flow`, `get_southbound_flow`, `get_margin_trading`, `get_block_trades`, `get_shareholder_count`, `get_lockup_expiry`, `get_sector_info`, `get_research_reports`, `get_stock_news`, `get_sec_filings`, `get_financial_statements`, `get_options_chain`, `get_stock_profile`, `screen_market`, `search_symbol`, `get_macro_series`, `iwencai_search`, `qveris_search`, `qveris_inspect`, `qveris_execute`, `get_institutional_holdings`, `etf_holdings`, `prediction_market`, `research_papers`, `get_swarm_status`, `get_run_result`, `list_runs`, `reap_stale_runs`, `retry_run`, `analyze_trade_journal`, `extract_shadow_strategy`, `run_shadow_backtest`, `render_shadow_report`, `scan_shadow_signals`, `quantlib_call`, `cashflow_performance`, `orderbook_depth`, `sentiment`, `technical_indicators`, `get_fundamentals`, `get_fund_nav`, `get_cn_macro_series`, `get_cn_announcements`, `search_broker_reports`, `paper_trade_step`.
 
 `quantlib_call` attribution requires finite sector weights and returns, finite Carino return inputs, and a finite non-negative weight-sum tolerance. Invalid data is rejected explicitly rather than returned as an attribution result containing `NaN`. Missing returns for a zero-weight sector may still be inferred from the other side.
 
@@ -2202,7 +2230,7 @@ Vibe-Trading/
 ├── agent/                          # Backend (Python)
 │   ├── cli/                        # CLI package — interactive TUI + subcommands
 │   ├── api_server.py               # FastAPI server — runs, sessions, upload, swarm, SSE
-│   ├── mcp_server.py               # MCP server — 81 tools for OpenClaw / Claude Desktop
+│   ├── mcp_server.py               # MCP server — 82 tools for OpenClaw / Claude Desktop
 │   │
 │   ├── src/
 │   │   ├── agent/                  # ReAct agent core
@@ -2217,7 +2245,7 @@ Vibe-Trading/
 │   │   ├── memory/                 # Cross-session persistent memory
 │   │   │   └── persistent.py       #   file-based memory (~/.vibe-trading/memory/)
 │   │   │
-│   │   ├── tools/                  # 112 auto-discovered agent tools
+│   │   ├── tools/                  # 113 auto-discovered agent tools
 │   │   │   ├── backtest_tool.py    #   run backtests
 │   │   │   ├── remember_tool.py    #   cross-session memory (save/recall/forget)
 │   │   │   ├── skill_writer_tool.py #  skill CRUD (save/patch/delete/file)
